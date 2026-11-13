@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สถานีส่งชิ้นงานนิวแมติก 3D</title>
+<style>
+  :root { color-scheme:light; --background:#f5f8fc; --foreground:#192b41; --muted:#dae5ee; --muted-foreground:#617488; --viz-series-1:#086ca6; --viz-series-2:#b94d20; --viz-series-3:#d89b42; --viz-series-4:#7948ae; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--background); color:var(--foreground); font:16px/1.5 system-ui,sans-serif; }
+  main { max-width:1200px; margin:auto; padding:clamp(16px,4vw,48px); }
+  h1 { margin:0 0 20px; font-size:clamp(23px,4vw,36px); }
+  h3,p { margin:0; }
+  .viz-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .btn { font:inherit; border:1px solid #aabed0; border-radius:8px; padding:7px 12px; color:inherit; background:#fff; cursor:pointer; }
+  .btn-primary { background:#075d91; color:white; border-color:#075d91; }
+  .btn:disabled { opacity:.48; cursor:default; }
+  .transfer-views section { min-width:0; padding:clamp(10px,2vw,18px); border:1px solid #cfdae5; border-radius:12px; background:#fff; }
+  .camera-help { color:var(--muted-foreground); font-size:.9rem; margin-top:4px; }
+  canvas[data-machine] { touch-action:none; cursor:grab; background:linear-gradient(165deg,#e4e9eb 0%,#f7f8f7 54%,#d4dbdc 100%); border-radius:8px; margin:8px 0; }
+  canvas[data-machine]:active { cursor:grabbing; }
+</style>
+</head>
+<body><main>
+<nav style="font-size:14px;margin-bottom:10px"><a href="./" style="color:#075d91;text-decoration:none">← แบบจำลองทั้งหมด · ตำราระบบอัตโนมัติด้วยนิวแมติกส์</a></nav>
+<h1>สถานีส่งชิ้นงานนิวแมติก 3D</h1>
+<div id="pneumatic-transfer">
+  <style>
+    #pneumatic-transfer { display:grid; gap:1em; }
+    #pneumatic-transfer .transfer-views { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1em; }
+    #pneumatic-transfer canvas { display:block; width:100%; aspect-ratio:360 / 338; }
+    .seq-svg { display:block; width:100%; max-width:340px; margin:10px auto 2px; }
+    .zoom-toggle { display:flex; align-items:center; gap:6px; font-size:.9rem; margin:6px 0 8px; cursor:pointer; width:max-content; }
+    .circuit-frame { position:relative; border:1px solid #cfdae5; border-radius:8px; background:#fff; overflow:hidden; }
+    .circuit-frame svg { display:block; width:100%; aspect-ratio:760 / 450; }
+    .focus-chip { display:block; padding:4px 10px; background:#192b41; color:#fff; font-size:.88rem; min-height:1.5em; }
+    .c-sym { fill:none; stroke:#2b3a4b; stroke-width:1.6; stroke-linejoin:round; }
+    .c-ink { fill:#2b3a4b; }
+    .c-box { fill:#fff; stroke:#2b3a4b; stroke-width:1.8; transition:fill .2s; }
+    .c-box.on { fill:#d8ecf6; }
+    .c-box.sig.on { fill:#ece0fa; }
+    .c-rod { fill:#c9d3d8; stroke:#2b3a4b; stroke-width:1.2; }
+    .c-act { fill:#fff; stroke:#2b3a4b; stroke-width:1.6; transition:fill .2s; }
+    .c-act.on { fill:#68369d; }
+    .c-slide { transition:transform .35s cubic-bezier(.4,0,.2,1); }
+    .c-pipe { fill:none; stroke:#a9b5c1; stroke-width:2.4; stroke-linejoin:round; transition:stroke .2s, d .35s cubic-bezier(.4,0,.2,1); }
+    @media (prefers-reduced-motion: reduce) { .c-slide, .c-pipe { transition:none; } }
+    .c-pipe.main.on { stroke:#1876a2; stroke-width:3.4; }
+    .c-pipe.sig { stroke-dasharray:7 4; }
+    .c-pipe.sig.on { stroke:#7b3fbf; stroke-width:3.2; animation:c-flow .7s linear infinite; }
+    @keyframes c-flow { to { stroke-dashoffset:-22; } }
+    .c-dot { fill:#1876a2; }
+    .c-text { font:700 17px system-ui,sans-serif; fill:#192b41; }
+    .c-port { font:10px system-ui,sans-serif; fill:#6b7a8a; }
+    .c-tag rect { fill:#fff; stroke:#aabed0; transition:fill .2s; }
+    .c-tag text { font:600 13px system-ui,sans-serif; fill:#192b41; }
+    .c-tag.on rect { fill:#68369d; stroke:#68369d; }
+    .c-tag.on text { fill:#fff; }
+    @media (prefers-reduced-motion: reduce) { .c-pipe.sig.on { animation:none; } }
+    .valve-types { margin:12px 0 0; display:grid; gap:6px; }
+    .valve-types div { display:grid; grid-template-columns:minmax(5.5em,auto) 1fr; gap:8px; }
+    .valve-types dt { font-weight:600; }
+    .valve-types dd { margin:0; }
+    @media(max-width:670px) { #pneumatic-transfer .transfer-views { grid-template-columns:1fr; } }
+  </style>
+  <div class="viz-row">
+    <button type="button" class="btn btn-primary" data-start>Start · 1 รอบ</button>
+    <button type="button" class="btn" data-step>ทีละขั้น</button>
+    <button type="button" class="btn" data-pause disabled>หยุดชั่วคราว</button>
+    <button type="button" class="btn" data-sound aria-pressed="true">เสียง: เปิด</button>
+  </div>
+  <p aria-live="polite" data-status>พร้อมเริ่ม · A และ B หดสุด</p>
+  <div class="transfer-views">
+    <section><h3>สถานีส่งชิ้นงาน 3D</h3><p class="camera-help" id="camera-help">ลากซ้ายเพื่อหมุน · ลากขวาเพื่อเลื่อน · หมุนล้อเพื่อซูม</p><canvas tabindex="0" aria-describedby="camera-help" data-machine role="img" aria-label="สถานี 3D พร้อมจุดติดตั้งลิมิต a0 a1 b0 b1"></canvas><button type="button" class="btn" data-reset-view>คืนมุมมอง</button></section>
+    <section>
+      <h3>วงจรลม A+ B+ A− B−</h3>
+      <p class="camera-help">เส้นทึบ = ลมหลัก · เส้นประ = ลมสัญญาณ · สีน้ำเงิน/ม่วง = มีลมไหลอยู่</p>
+      <svg class="seq-svg" viewBox="0 0 300 100" data-sequence role="img" aria-label="แผนภาพระยะชัก A+ B+ A− B−">
+        <rect data-seq-col x="40" y="16" width="60" height="80" rx="3" fill="#ece0fa" visibility="hidden"/>
+        <g font-size="11" text-anchor="middle" fill="#5b6b7c" font-family="system-ui,sans-serif"><text x="70" y="12">A+</text><text x="130" y="12">B+</text><text x="190" y="12">A−</text><text x="250" y="12">B−</text></g>
+        <path d="M40 20H280M40 50H280M40 60H280M40 90H280M40 20V90M100 20V90M160 20V90M220 20V90M280 20V90" stroke="#b8c7d5" stroke-dasharray="3 3" fill="none"/>
+        <path d="M40 50L100 20L160 20L220 50L280 50M40 90L100 90L160 60L220 60L280 90" stroke="#c0392b" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+        <g font-size="14" font-weight="700" fill="#192b41" font-family="system-ui,sans-serif"><text x="18" y="40">A</text><text x="18" y="80">B</text></g>
+        <line data-seq-cursor y1="16" y2="96" stroke="#68369d" stroke-width="2" visibility="hidden"/>
+      </svg>
+      <label class="zoom-toggle"><input type="checkbox" data-auto-zoom checked> ซูมเข้าขั้นตอนที่กำลังทำงาน</label>
+      <div class="circuit-frame">
+        <svg data-circuit viewBox="0 0 760 450" role="img" aria-label="วงจรลมของกระบอก A และ B พร้อมวาล์ว VA VB Start a0 a1 b0 b1"></svg>
+        <span class="focus-chip" data-focus></span>
+      </div>
+      <p class="camera-help">ป้ายสีม่วง = วาล์วที่ถูกกด · ช่องวาล์วที่มีสีคือตำแหน่งที่ทำงานอยู่</p>
+      <dl class="valve-types">
+        <div><dt>VA / VB</dt><dd>วาล์วควบคุมทิศทาง 5/2 สั่งด้วยลมไพลอตสองด้าน ค้างตำแหน่งล่าสุด</dd></div>
+        <div><dt>Start</dt><dd>วาล์ว 3/2 ปกติปิด กดด้วยมือ คืนด้วยสปริง รับลมผ่าน b0</dd></div>
+        <div><dt>a0 / a1<br>b0 / b1</dt><dd>วาล์วลิมิต 3/2 ปกติปิด สั่งด้วยลูกกลิ้ง คืนด้วยสปริง</dd></div>
+      </dl>
+    </section>
+  </div>
+  <script>
+  (() => {
+    const root = document.getElementById('pneumatic-transfer');
+    const find = name => root.querySelector('[data-' + name + ']');
+    const start = find('start'), step = find('step'), pause = find('pause');
+    const machine = find('machine');
+    // ---------- เสียง (สังเคราะห์ด้วย Web Audio ไม่ใช้ไฟล์เสียง) ----------
+    const sound = (() => {
+      let ctx = null, noiseBuffer = null, hissNodes = [];
+      let enabled = true;
+      try { enabled = localStorage.getItem('pneumatic-sound') !== 'off'; } catch {}
+      function ready() {
+        if (!enabled) return null;
+        if (!ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return null;
+          ctx = new AudioCtx();
+          noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        return ctx;
+      }
+      function envelope(gain, t, peak, attack, dur) {
+        gain.gain.setValueAtTime(.0001, t);
+        gain.gain.exponentialRampToValueAtTime(peak, t + attack);
+        if (dur > attack + .12) gain.gain.setValueAtTime(peak, t + dur - .12);
+        gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      }
+      function noise(t, dur, {freq = 3000, q = .7, type = 'bandpass', peak = .2, attack = .02} = {}) {
+        const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        source.buffer = noiseBuffer; source.loop = true;
+        filter.type = type; filter.frequency.value = freq; filter.Q.value = q;
+        envelope(gain, t, peak, attack, dur);
+        source.connect(filter).connect(gain).connect(ctx.destination);
+        source.start(t); source.stop(t + dur + .05);
+        return {source, gain};
+      }
+      function tone(t, from, to, dur, peak, type = 'sine') {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(from, t);
+        osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+        gain.gain.setValueAtTime(peak, t);
+        gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t); osc.stop(t + dur + .02);
+      }
+      function play(fn) { const c = ready(); if (c) fn(c.currentTime); }
+      return {
+        get enabled() { return enabled; },
+        set enabled(value) {
+          enabled = value;
+          try { localStorage.setItem('pneumatic-sound', value ? 'on' : 'off'); } catch {}
+          if (!value) { this.stopHiss(); ctx?.suspend(); } else ready();
+        },
+        // วาล์วสลับห้อง: เสียงคลิกสั้น
+        click: () => play(t => { noise(t, .04, {freq:2600, q:1.4, peak:.3, attack:.002}); tone(t, 1700, 800, .035, .08, 'square'); }),
+        // ลมไหลเข้ากระบอก + ลมระบายออก
+        hiss(seconds) {
+          this.stopHiss();
+          play(t => {
+            const dur = Math.max(.15, seconds);
+            hissNodes = [noise(t, dur, {freq:4500, q:.6, peak:.1, attack:.05}), noise(t + .03, dur, {freq:1400, q:.9, peak:.04, attack:.12})];
+          });
+        },
+        stopHiss() {
+          if (!ctx) return;
+          const t = ctx.currentTime;
+          for (const {source, gain} of hissNodes) {
+            gain.gain.cancelScheduledValues(t);
+            gain.gain.setValueAtTime(Math.max(gain.gain.value, .0001), t);
+            gain.gain.exponentialRampToValueAtTime(.0001, t + .06);
+            source.stop(t + .08);
+          }
+          hissNodes = [];
+        },
+        // ลูกสูบชนสุดระยะ
+        clunk: () => play(t => { tone(t, 150, 55, .2, .45); noise(t, .07, {freq:900, q:1, peak:.22, attack:.003}); }),
+        // ชิ้นงานไม้ตกกระทบ
+        thud: () => play(t => { tone(t, 110, 50, .22, .5); noise(t, .09, {freq:500, type:'lowpass', peak:.35, attack:.003}); }),
+        // ชิ้นงานไถลลงทางลาด
+        slide: seconds => play(t => { noise(t, Math.max(.15, seconds), {freq:650, q:2.2, peak:.07, attack:.06}); })
+      };
+    })();
+    const soundButton = find('sound');
+    function showSound() {
+      soundButton.textContent = 'เสียง: ' + (sound.enabled ? 'เปิด' : 'ปิด');
+      soundButton.setAttribute('aria-pressed', String(sound.enabled));
+    }
+    soundButton.onclick = () => { sound.enabled = !sound.enabled; showSound(); };
+    showSound();
+    const cues = new Set();
+    function cue(name, fn) { if (!cues.has(name)) { cues.add(name); fn(); } }
+    // ---------- วงจรลม (SVG) ----------
+    const NS = 'http://www.w3.org/2000/svg';
+    const circuit = find('circuit'), focusChip = find('focus'), autoZoom = find('auto-zoom');
+    const seqCol = find('seq-col'), seqCursor = find('seq-cursor');
+    function el(tag, attrs, parent) {
+      const node = document.createElementNS(NS, tag);
+      for (const key in attrs) node.setAttribute(key, attrs[key]);
+      parent.appendChild(node);
+      return node;
+    }
+    const P = points => 'M' + points.map(point => point.join(' ')).join('L');
+    const layer = {};
+    for (const name of ['pipes','parts','text']) layer[name] = el('g', {}, circuit);
+    function text(value, x, y, cls = 'c-text', anchor = 'middle', parent = layer.text) {
+      const node = el('text', {x, y, class:cls, 'text-anchor':anchor}, parent);
+      node.textContent = value;
+      return node;
+    }
+    // ท่อลม: main = ลมหลัก, sig = ลมสัญญาณ/ไพลอต
+    const pipes = [
+      {pts:[[155,160],[155,135],[80,135],[80,90]], kind:'main', on:s => s.extA},
+      {pts:[[195,160],[195,115],[185,115],[185,90]], kind:'main', on:s => !s.extA},
+      {pts:[[535,160],[535,135],[460,135],[460,90]], kind:'main', on:s => s.extB},
+      {pts:[[575,160],[575,115],[565,115],[565,90]], kind:'main', on:s => !s.extB},
+      {pts:[[86,360],[86,400],[701,400]], kind:'main', on:() => true},
+      ...[[175,200],[276,300],[466,300],[555,200],[666,300]].map(([x,y]) => ({pts:[[x,y],[x,400]], kind:'main', on:() => true})),
+      {pts:[[86,330],[86,300]], kind:'sig', on:s => s.b0},
+      // ปลายท่อไพลอตตามตัววาล์วที่เลื่อน (+70 เมื่อวาล์วอยู่ห้องซ้าย)
+      {pts:s => [[86,270],[86,255],[30,255],[30,180],[54+70*s.extA,180]], kind:'sig', on:s => s.start},
+      {pts:s => [[276,270],[276,255],[310,255],[310,180],[226+70*s.extA,180]], kind:'sig', on:s => s.b1},
+      {pts:s => [[466,270],[466,255],[410,255],[410,180],[434+70*s.extB,180]], kind:'sig', on:s => s.a1},
+      {pts:s => [[666,270],[666,255],[690,255],[690,180],[606+70*s.extB,180]], kind:'sig', on:s => s.a0}
+    ];
+    for (const pipe of pipes) {
+      const initial = typeof pipe.pts === 'function' ? pipe.pts({extA:0, extB:0}) : pipe.pts;
+      pipe.node = el('path', {d:P(initial), class:'c-pipe ' + pipe.kind}, layer.pipes);
+    }
+    for (const x of [175,276,466,555,666]) el('circle', {cx:x, cy:400, r:4, class:'c-dot'}, layer.pipes);
+    function arrow(g, x1, y1, x2, y2) {
+      const angle = Math.atan2(y2-y1, x2-x1), size = 7;
+      el('path', {d:P([[x1,y1],[x2,y2]]), class:'c-sym'}, g);
+      el('path', {d:P([[x2,y2],[x2-size*Math.cos(angle-.45),y2-size*Math.sin(angle-.45)],[x2-size*Math.cos(angle+.45),y2-size*Math.sin(angle+.45)]])+'Z', class:'c-ink'}, g);
+    }
+    function blocked(g, x, y) { el('path', {d:P([[x,y],[x,y-9]])+P([[x-5,y-9],[x+5,y-9]]), class:'c-sym'}, g); }
+    function exhaust(g, x, y) { el('path', {d:P([[x,y],[x,y+6]])+P([[x-6,y+6],[x+6,y+6],[x,y+15]])+'Z', class:'c-sym'}, g); }
+    function spring(g, x, y) {
+      const points = [[x,y]];
+      for (let i = 1; i <= 6; i++) points.push([x+3*i, y+(i%2 ? -6 : 6)]);
+      points.push([x+22,y]);
+      el('path', {d:P(points), class:'c-sym'}, g);
+    }
+    function pilot(g, x, y, dir) {
+      el('path', {d:P([[x,y],[x+dir*6,y]])+P([[x+dir*16,y-6],[x+dir*16,y+6],[x+dir*6,y]])+'Z', class:'c-sym'}, g);
+    }
+    // วาล์วเลื่อนห้อง: พอร์ตอยู่กับที่ ตัววาล์ว (m) เลื่อนให้ห้องที่ทำงานมาอยู่ตรงพอร์ต
+    function slider(g, shift) {
+      const m = el('g', {class:'c-slide'}, g);
+      m.shiftBy = shift;
+      return m;
+    }
+    function valve52(x, y, name) {
+      const g = el('g', {}, layer.parts), w = 70, h = 40, r = x + w;
+      exhaust(g, r+15, y+h); exhaust(g, r+55, y+h);
+      for (const [label,px,py] of [['4',r+15,y-4],['2',r+55,y-4],['5',r+8,y+h+12],['1',r+42,y+h+12],['3',r+62,y+h+12]]) text(label, px-4, py, 'c-port', 'end', g);
+      text(name, x+20, y+h+26, 'c-text', 'middle', g);
+      const m = slider(g, w);
+      const boxes = [0,1].map(i => el('rect', {x:x+i*w, y, width:w, height:h, class:'c-box'}, m));
+      arrow(m, x+35, y+h, x+15, y); arrow(m, x+55, y, x+55, y+h); blocked(m, x+15, y+h);
+      arrow(m, r+35, y+h, r+55, y); arrow(m, r+15, y, r+15, y+h); blocked(m, r+55, y+h);
+      pilot(m, x, y+h/2, -1); pilot(m, x+2*w, y+h/2, 1);
+      return {boxes, move:m};
+    }
+    function valve32(x, y, name, actuator) {
+      const g = el('g', {}, layer.parts), w = 36, h = 30, r = x + w, mid = y + h/2;
+      exhaust(g, r+26, y+h);
+      text('2', r+6, y-3, 'c-port', 'end', g);
+      text('1', r+6, y+h+11, 'c-port', 'end', g);
+      const m = slider(g, w);
+      const boxes = [0,1].map(i => el('rect', {x:x+i*w, y, width:w, height:h, class:'c-box sig'}, m));
+      arrow(m, x+10, y+h, x+10, y); blocked(m, x+26, y+h);
+      arrow(m, r+10, y, r+26, y+h); blocked(m, r+10, y+h);
+      spring(m, x+2*w, mid);
+      el('path', {d:P([[x,mid],[x-9,mid]]), class:'c-sym'}, m);
+      const act = actuator === 'button'
+        ? el('path', {d:`M${x-9} ${mid-8}A8 8 0 0 0 ${x-9} ${mid+8}Z`, class:'c-act'}, m)
+        : el('circle', {cx:x-14, cy:mid, r:5, class:'c-act'}, m);
+      const tag = el('g', {class:'c-tag'}, g);
+      const tagWidth = name.length > 2 ? 46 : 30;
+      el('rect', {x:x+18-tagWidth/2, y:y+h+5, width:tagWidth, height:19, rx:4}, tag);
+      text(name, x+18, y+h+19, '', 'middle', tag);
+      return {boxes, act, tag, move:m};
+    }
+    function cylinder(x, name) {
+      const g = el('g', {}, layer.parts);
+      el('rect', {x, y:50, width:140, height:40, class:'c-box'}, g);
+      const rod = el('rect', {y:66, width:150, height:8, class:'c-rod'}, g);
+      const piston = el('rect', {y:52, width:8, height:36, class:'c-ink'}, g);
+      const cam = el('rect', {y:60, width:5, height:20, class:'c-ink'}, g);
+      for (const px of [x+20, x+125]) el('circle', {cx:px, cy:90, r:3, class:'c-ink'}, g);
+      text(name, x-18, 77, 'c-text', 'middle', g).style.fontSize = '22px';
+      return value => {
+        const px = x + 4 + 110*value;
+        piston.setAttribute('x', px);
+        rod.setAttribute('x', px + 8);
+        cam.setAttribute('x', px + 153);
+      };
+    }
+    function marker(name, x) {
+      const g = el('g', {class:'c-tag'}, layer.text);
+      el('path', {d:P([[x,32],[x,58]]), class:'c-sym'}, g);
+      el('rect', {x:x-16, y:12, width:32, height:20, rx:4}, g);
+      text(name, x, 27, '', 'middle', g);
+      return g;
+    }
+    const cylA = cylinder(60, 'A'), cylB = cylinder(440, 'B');
+    const VA = valve52(70, 160, 'VA'), VB = valve52(450, 160, 'VB');
+    const signalValves = {
+      start: valve32(40, 270, 'Start', 'button'),
+      b0: valve32(40, 330, 'b0'),
+      b1: valve32(230, 270, 'b1'),
+      a1: valve32(420, 270, 'a1'),
+      a0: valve32(620, 270, 'a0')
+    };
+    const markers = {a0:marker('a0',222), a1:marker('a1',332), b0:marker('b0',602), b1:marker('b1',712)};
+    el('circle', {cx:715, cy:400, r:14, class:'c-act'}, layer.parts);
+    el('path', {d:P([[715,391],[708,404],[722,404]])+'Z', class:'c-ink'}, layer.parts);
+    text('แหล่งจ่ายลม', 715, 436, 'c-port', 'middle').style.fontSize = '13px';
+    function updateCircuit(s) {
+      for (const pipe of pipes) {
+        pipe.node.classList.toggle('on', !!pipe.on(s));
+        if (typeof pipe.pts === 'function') {
+          const d = P(pipe.pts({extA:+s.extA, extB:+s.extB}));
+          pipe.node.setAttribute('d', d);           // ทุกเบราว์เซอร์ (รวม Safari)
+          pipe.node.style.d = `path("${d}")`;        // Chrome/Edge/Firefox: เลื่อนแบบนุ่มนวล
+        }
+      }
+      cylA(s.a); cylB(s.b);
+      const shift = (valve, active) => { valve.move.style.transform = active ? `translateX(${valve.move.shiftBy}px)` : ''; };
+      shift(VA, s.extA); shift(VB, s.extB);
+      VA.boxes[0].classList.toggle('on', s.extA); VA.boxes[1].classList.toggle('on', !s.extA);
+      VB.boxes[0].classList.toggle('on', s.extB); VB.boxes[1].classList.toggle('on', !s.extB);
+      for (const [name, valve] of Object.entries(signalValves)) {
+        const pressed = !!s[name];
+        shift(valve, pressed);
+        valve.boxes[0].classList.toggle('on', pressed);
+        valve.boxes[1].classList.toggle('on', !pressed);
+        valve.act.classList.toggle('on', pressed);
+        valve.tag.classList.toggle('on', pressed);
+      }
+      for (const [name, tag] of Object.entries(markers)) tag.classList.toggle('on', !!s[name]);
+      const column = 40 + 60*(phase-1);
+      seqCol.setAttribute('visibility', phase ? 'visible' : 'hidden');
+      seqCursor.setAttribute('visibility', phase ? 'visible' : 'hidden');
+      seqCol.setAttribute('x', column);
+      seqCursor.setAttribute('x1', column + 60*progress);
+      seqCursor.setAttribute('x2', column + 60*progress);
+    }
+    // ---------- ซูมตามขั้นตอน ----------
+    const VIEW_W = 760, VIEW_H = 450, overview = {x:0, y:0, w:VIEW_W, h:VIEW_H};
+    const LEAD = 1100, OVERVIEW_DELAY = 1800;
+    const focusRegions = {
+      signal: [null, {x:10,y:140,w:310,h:240}, {x:395,y:140,w:300,h:185}, {x:20,y:140,w:300,h:185}, {x:420,y:140,w:290,h:185}],
+      motion: [null, {x:20,y:5,w:340,h:215}, {x:400,y:5,w:345,h:215}, {x:20,y:5,w:340,h:215}, {x:400,y:5,w:345,h:215}]
+    };
+    const focusText = {
+      signal: ['', 'Start + b0 ส่งสัญญาณ → VA สลับไป A+', 'a1 ถูกกด → VB สลับไป B+', 'b1 ถูกกด → VA สลับไป A−', 'a0 ถูกกด → VB สลับไป B−'],
+      motion: ['', 'VA จ่ายลมเข้าท้าย → กระบอก A ยืด', 'VB จ่ายลมเข้าท้าย → กระบอก B ยืด', 'VA จ่ายลมเข้าหน้า → กระบอก A หด', 'VB จ่ายลมเข้าหน้า → กระบอก B หด']
+    };
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let view = {...overview}, viewGoal = overview, viewFrame = 0, lastGlide = null, overviewTimer = 0, lead = 0;
+    function fit({x, y, w, h}) {
+      const aspect = VIEW_W / VIEW_H;
+      if (w / h < aspect) { const width = h * aspect; x -= (width - w) / 2; w = width; }
+      else { const height = w / aspect; y -= (height - h) / 2; h = height; }
+      return {x:Math.max(0, Math.min(VIEW_W - w, x)), y:Math.max(0, Math.min(VIEW_H - h, y)), w, h};
+    }
+    function showView() { circuit.setAttribute('viewBox', [view.x, view.y, view.w, view.h].join(' ')); }
+    function aim(region) {
+      const goal = region === overview ? overview : fit(region);
+      if (['x','y','w','h'].every(key => goal[key] === viewGoal[key])) return;
+      viewGoal = goal;
+      if (reduceMotion) { view = {...goal}; showView(); return; }
+      if (!viewFrame) viewFrame = requestAnimationFrame(glide);
+    }
+    function glide(time) {
+      const dt = lastGlide === null ? 16 : Math.min(time - lastGlide, 50);
+      lastGlide = time;
+      const k = 1 - Math.exp(-dt / 160);
+      let moving = false;
+      for (const key of ['x','y','w','h']) {
+        const diff = viewGoal[key] - view[key];
+        if (Math.abs(diff) < .3) view[key] = viewGoal[key];
+        else { view[key] += diff * k; moving = true; }
+      }
+      showView();
+      if (moving) viewFrame = requestAnimationFrame(glide);
+      else { viewFrame = 0; lastGlide = null; }
+    }
+    function updateFocus() {
+      if (!autoZoom.checked) { aim(overview); focusChip.textContent = phase ? 'ขั้น ' + phase + '/4' : 'ภาพรวมวงจร'; return; }
+      if (phase === 0) {
+        if (!completed || !overviewTimer) aim(overview);
+        focusChip.textContent = completed && overviewTimer ? 'จบรอบ · b0 ถูกกด พร้อม Start รอบถัดไป' : 'ภาพรวมวงจร';
+        return;
+      }
+      const stage = lead > 0 ? 'signal' : 'motion';
+      aim(focusRegions[stage][phase]);
+      focusChip.textContent = 'ขั้น ' + phase + '/4 · ' + focusText[stage][phase];
+    }
+    autoZoom.onchange = () => { clearTimeout(overviewTimer); overviewTimer = 0; draw(); };
+    const labels = [
+      'พร้อมเริ่ม · A และ B หดสุด',
+      'A+ · b0 จ่ายลมให้ปุ่ม Start แล้ว A ดันชิ้นล่างสุด',
+      'B+ · a1 ถูกกดเมื่อ A ยืดสุด แล้ว B ดันชิ้นงานเข้าทางลาด',
+      'A− · b1 ถูกกดเมื่อ B ยืดสุด แล้ว A หดเปิดช่องป้อน',
+      'B− · a0 ถูกกดเมื่อ A หดสุด แล้ว B จึงหด'
+    ];
+    let phase = 0, progress = 0, running = false, automatic = false;
+    let paused = false, completed = false, previous = null, frame, reachedAt = null;
+    const duration = [0, 1450, 1550, 1450, 1350];
+    const clamp = value => Math.max(0, Math.min(1, value));
+    function updateControls() {
+      start.disabled = running || paused || phase !== 0;
+      step.disabled = running || paused;
+      pause.disabled = !running && !paused;
+      pause.textContent = paused ? 'เล่นต่อ' : 'หยุดชั่วคราว';
+    }
+    function enter(next) {
+      phase = next;
+      progress = 0;
+      previous = null;
+      reachedAt = null;
+      lead = next > 0 && autoZoom.checked ? LEAD : 0;
+      clearTimeout(overviewTimer);
+      overviewTimer = 0;
+      if (next === 0 && completed && autoZoom.checked) {
+        overviewTimer = setTimeout(() => { overviewTimer = 0; draw(); }, OVERVIEW_DELAY);
+      }
+      cues.clear();
+      sound.stopHiss();
+      if (next > 0) sound.click();
+      delete find('status').dataset.arrival;
+      running = next > 0;
+      find('status').textContent = next === 0 && completed
+        ? 'จบรอบ · b0 ถูกกดเมื่อ B หดสุด พร้อมรับ Start รอบถัดไป'
+        : labels[next];
+      updateControls();
+    }
+    function tick(time) {
+      if (!running) return;
+      const dt = previous === null ? 0 : Math.min(time - previous, 50);
+      if (lead > 0) lead = Math.max(0, lead - dt);
+      else progress = clamp(progress + dt / duration[phase]);
+      previous = time;
+      if (lead === 0 && progress < 1) cue('hiss', () => sound.hiss((1 - progress) * duration[phase] / 1000));
+      if (phase === 2 && progress > 28/60) cue('slide', () => sound.slide(duration[2] * (1 - 28/60) / 1000));
+      if (progress === 1) cue('end', () => {
+        sound.clunk();
+        if (phase === 2 || phase === 3) setTimeout(sound.thud, 60);
+        setTimeout(sound.click, 140);
+      });
+      if (progress === 1) {
+        reachedAt ??= time;
+        if (phase === 4) {
+          completed = true;
+          enter(0);
+        } else if (automatic) {
+          const arrival = [null,'a1','b1','a0'][phase];
+          if (find('status').dataset.arrival !== arrival) {
+            find('status').dataset.arrival = arrival;
+            find('status').textContent = arrival + ' ถูกกด · ' + ['','สั่ง B+','สั่ง A−','สั่ง B−'][phase];
+          }
+          if (time - reachedAt >= 400) enter(phase + 1);
+        } else {
+          find('status').textContent = ['','a1 ถูกกด · สั่ง B+','b1 ถูกกด · สั่ง A−','a0 ถูกกด · สั่ง B−'][phase];
+          running = false;
+          updateControls();
+        }
+      }
+      draw();
+      if (running) frame = requestAnimationFrame(tick);
+    }
+    start.onclick = () => { automatic = true; enter(1); draw(); frame = requestAnimationFrame(tick); };
+    step.onclick = () => { automatic = false; enter(phase + 1); draw(); frame = requestAnimationFrame(tick); };
+    pause.onclick = () => {
+      paused = !paused;
+      running = !paused;
+      previous = null;
+      if (paused && progress === 1) reachedAt = null;
+      if (paused) sound.stopHiss();
+      else if (cues.has('hiss') && progress < 1) sound.hiss((1 - progress) * duration[phase] / 1000);
+      updateControls();
+      if (running) frame = requestAnimationFrame(tick);
+      else cancelAnimationFrame(frame);
+    };
+    const camera = { yaw: .58, pitch: .51, zoom: 1, x: 0, y: 0 };
+    const depthCanvas = document.createElement('canvas');
+    const gl = depthCanvas.getContext('webgl', {alpha:true, antialias:true});
+    const renderer = gl && createDepthRenderer(gl);
+    function createDepthRenderer(context) {
+      const program = context.createProgram();
+      const sources = [
+        [context.VERTEX_SHADER, 'attribute vec3 point; attribute vec4 color; varying vec4 paint; void main(){ gl_Position=vec4(point,1.0); paint=color; }'],
+        [context.FRAGMENT_SHADER, 'precision mediump float; varying vec4 paint; void main(){ gl_FragColor=paint; }']
+      ];
+      for (const [type,source] of sources) {
+        const shader = context.createShader(type);
+        context.shaderSource(shader,source);
+        context.compileShader(shader);
+        if (!context.getShaderParameter(shader,context.COMPILE_STATUS)) return null;
+        context.attachShader(program,shader);
+        context.deleteShader(shader);
+      }
+      context.linkProgram(program);
+      if (!context.getProgramParameter(program,context.LINK_STATUS)) return null;
+      context.useProgram(program);
+      const buffer = context.createBuffer();
+      context.bindBuffer(context.ARRAY_BUFFER,buffer);
+      for (const [name,size,offset] of [['point',3,0],['color',4,12]]) {
+        const attribute = context.getAttribLocation(program,name);
+        context.enableVertexAttribArray(attribute);
+        context.vertexAttribPointer(attribute,size,context.FLOAT,false,28,offset);
+      }
+      context.enable(context.DEPTH_TEST);
+      context.depthFunc(context.LEQUAL);
+      return vertices => {
+        context.viewport(0,0,depthCanvas.width,depthCanvas.height);
+        context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
+        context.bufferData(context.ARRAY_BUFFER,new Float32Array(vertices),context.DYNAMIC_DRAW);
+        context.drawArrays(context.TRIANGLES,0,vertices.length/7);
+      };
+    }
+    let drag = null;
+    machine.addEventListener('contextmenu', event => event.preventDefault());
+    machine.addEventListener('pointerdown', event => {
+      if (drag || ![0, 1, 2].includes(event.button)) return;
+      machine.focus({preventScroll:true});
+      event.preventDefault();
+      machine.setPointerCapture(event.pointerId);
+      drag = { id:event.pointerId, x:event.clientX, y:event.clientY, pan:event.button !== 0 || event.shiftKey };
+    });
+    machine.addEventListener('pointermove', event => {
+      if (drag?.id !== event.pointerId) return;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+      if (drag.pan) {
+        const scale = 360 / machine.clientWidth;
+        camera.x += dx * scale;
+        camera.y += dy * scale;
+      } else {
+        camera.yaw -= dx * .009;
+        camera.pitch = Math.max(.17, Math.min(1.48, camera.pitch + dy * .009));
+      }
+      draw();
+    });
+    machine.addEventListener('lostpointercapture', () => { drag = null; });
+    function zoom(factor) {
+      camera.zoom = Math.max(.45, Math.min(3, camera.zoom * factor));
+    }
+    machine.addEventListener('wheel', event => {
+      event.preventDefault();
+      const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? machine.clientHeight : 1);
+      zoom(Math.exp(-pixels * .0018));
+      draw();
+    }, {passive:false});
+    function resetView() {
+      Object.assign(camera, { yaw:.58, pitch:.51, zoom:1, x:0, y:0 });
+      draw();
+    }
+    find('reset-view').onclick = resetView;
+    machine.addEventListener('keydown', event => {
+      switch (event.key) {
+        case 'ArrowLeft': camera.yaw += .14; break;
+        case 'ArrowRight': camera.yaw -= .14; break;
+        case 'ArrowUp': camera.pitch = Math.min(1.48,camera.pitch+.12); break;
+        case 'ArrowDown': camera.pitch = Math.max(.17,camera.pitch-.12); break;
+        case '+': case '=': zoom(1.15); break;
+        case '-': zoom(1/1.15); break;
+        default: return;
+      }
+      event.preventDefault();
+      draw();
+    });
+    function draw() {
+      const style = getComputedStyle(root);
+      const color = (name, fallback) => style.getPropertyValue('--' + name).trim() || fallback;
+      const ink = color('foreground', '#243246');
+      const neutral = color('muted-foreground', '#68778b');
+      const surface = color('muted', '#d9e3ea');
+      const steel = '#aab6bc', chrome = '#dfe9eb', dark = '#36434a';
+      const frameMetal = '#637681', safety = '#edb932', airTube = '#1876a2';
+      const work = '#b5a284';
+      const a = [0, progress, 1, 1 - progress, 0][phase];
+      const b = [0, 0, progress, 1, 1 - progress][phase];
+      const limits = { a0:a===0, a1:a===1, b0:b===0, b1:b===1 };
+      function prepare(canvas) {
+        const width = canvas.clientWidth || 360;
+        const ratio = window.devicePixelRatio || 1;
+        const pixels = Math.round(width * ratio);
+        const logicalHeight = 338;
+        const height = Math.round(pixels * logicalHeight / 360);
+        if (canvas.width !== pixels || canvas.height !== height) {
+          canvas.width = pixels;
+          canvas.height = height;
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(pixels / 360, 0, 0, height / logicalHeight, 0, 0);
+        ctx.clearRect(0, 0, 360, logicalHeight);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.font = '14px sans-serif';
+        return ctx;
+      }
+      function line(ctx, points, stroke, width = 1, dash = []) {
+        ctx.beginPath();
+        points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      function label(ctx, value, x, y, align = 'left') {
+        ctx.fillStyle = ink;
+        ctx.textAlign = align;
+        ctx.fillText(value, x, y);
+      }
+      const scene = prepare(machine);
+      const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw);
+      const cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch);
+      const polygons = [];
+      const sceneScale = 1.08 * camera.zoom;
+      function project([x,y,z]) {
+        const horizontal = (x-69)*cy - (y-36)*sy;
+        const away = (x-69)*sy + (y-36)*cy;
+        return [
+          180+camera.x+sceneScale*horizontal,
+          145+camera.y+sceneScale*(away*sp-(z-8)*cp),
+          away*cp+(z-8)*sp
+        ];
+      }
+      function face(points, fill, shade, detail = false) {
+        const coords = points.map(project);
+        const depth = coords.reduce((sum, point) => sum + point[2], 0) / coords.length;
+        polygons.push({coords, depth, fill, shade, detail});
+      }
+      function paintScene() {
+        polygons.sort((first, second) => first.depth - second.depth);
+        for (const {coords,fill,shade,detail} of polygons) {
+          scene.beginPath();
+          coords.forEach(([x,y], i) => i ? scene.lineTo(x,y) : scene.moveTo(x,y));
+          scene.closePath();
+          scene.fillStyle = fill;
+          scene.fill();
+          scene.globalAlpha = shade;
+          scene.fillStyle = ink;
+          scene.fill();
+          scene.globalAlpha = 1;
+          if (detail) {
+            scene.strokeStyle = '#36434a60';
+            scene.lineWidth = .45;
+            scene.stroke();
+          }
+        }
+        polygons.length = 0;
+      }
+      function paintWithDepth() {
+        if (depthCanvas.width !== machine.width) depthCanvas.width = machine.width;
+        if (depthCanvas.height !== machine.height) depthCanvas.height = machine.height;
+        const vertices = [];
+        const colors = new Map();
+        function channels(fill) {
+          if (!colors.has(fill)) {
+            scene.fillStyle = fill;
+            const hex = scene.fillStyle;
+            colors.set(fill,[1,3,5].map(offset=>parseInt(hex.slice(offset,offset+2),16)/255));
+          }
+          return colors.get(fill);
+        }
+        const shadowColor = channels(ink);
+        for (const {coords,fill,shade} of polygons) {
+          const color = channels(fill).map((value,i)=>value*(1-shade)+shadowColor[i]*shade);
+          for (let i=1;i<coords.length-1;i++) {
+            for (const [x,y,z] of [coords[0],coords[i],coords[i+1]]) {
+              vertices.push(x/180-1,1-y/169,-z/1000,...color,1);
+            }
+          }
+        }
+        renderer(vertices);
+        scene.drawImage(depthCanvas,0,0,360,338);
+      }
+      function box(x,y,z,w,d,h,fill = surface, slope = 0) {
+        const p = [x,y,z+h], q = [x+w,y,z+h], r = [x+w,y+d,z+h-slope], s = [x,y+d,z+h-slope];
+        const lowP = [x,y,z], lowQ = [x+w,y,z], lowR = [x+w,y+d,z-slope], lowS = [x,y+d,z-slope];
+        if (sy >= 0) face([q,r,lowR,lowQ],fill,.28,true);
+        else face([p,s,lowS,lowP],fill,.28,true);
+        if (cy >= 0) face([s,r,lowR,lowS],fill,.15,true);
+        else face([p,q,lowQ,lowP],fill,.15,true);
+        face([p,q,r,s],fill,0,true);
+      }
+      function cylinder(axis, x,y,z, length, radius, material) {
+        const segments = 16;
+        const ring = offset => Array.from({length:segments}, (_,i) => {
+          const angle = i * Math.PI * 2 / segments;
+          const side = radius * Math.cos(angle), height = radius * Math.sin(angle);
+          return axis === 'x' ? [x+offset,y+side,z+height] : [x+side,y+offset,z+height];
+        });
+        const from = ring(0), to = ring(length);
+        for (let i=0; i<segments; i++) {
+          const angle = (i+.5) * Math.PI * 2 / segments;
+          const facing = Math.cos(angle)*(axis==='x'?cy:sy)*cp + Math.sin(angle)*sp;
+          if (facing <= 0) continue;
+          const next = (i+1)%segments;
+          const shade = .36*(1-Math.pow(Math.max(0,Math.sin(angle-.36)),3));
+          face([from[i],from[next],to[next],to[i]],material,shade);
+        }
+        face((axis==='x'?sy:cy)>=0 ? to : from,material,.24,true);
+      }
+      function hose(points) {
+        for (let i=1;i<points.length;i++) {
+          const [x,y,z] = points[i-1], [u,v,w] = points[i];
+          face([[x,y-1.3,z],[u,v-1.3,w],[u,v+1.3,w],[x,y+1.3,z]],airTube,.08);
+          face([[x,y,z-1.3],[u,v,w-1.3],[u,v,w+1.3],[x,y,z+1.3]],airTube,.2);
+        }
+      }
+      const floor = -103;
+      face([[-320,-320,floor],[450,-320,floor],[450,450,floor],[-320,450,floor]],'#cbd1d0',0);
+      for (let i=-280;i<=400;i+=40) {
+        face([[i,-320,floor],[i+.7,-320,floor],[i+.7,450,floor],[i,450,floor]],'#adb7b8',0);
+        face([[-320,i,floor],[450,i,floor],[450,i+.7,floor],[-320,i+.7,floor]],'#adb7b8',0);
+      }
+      for (const y of [184,191]) {
+        face([[-310,y,floor],[430,y,floor],[430,y+3,floor],[-310,y+3,floor]],safety,0);
+      }
+      if (!renderer) paintScene();
+      const shadow = [[-61,-31],[163,-31],[166,47],[145,165],[91,165],[-61,49]];
+      face(shadow.map(([x,y])=>[x+6,y+8,floor+.1]),'#a3aeae',0);
+      if (!renderer) paintScene();
+      for (const x of [-49,145]) {
+        for (const y of [-23,32]) {
+          box(x,y,floor,12,12,4,dark);
+          box(x+2,y+2,-99,8,8,93,frameMetal);
+        }
+        box(x+2,-20,-81,8,58,5,frameMetal);
+      }
+      for (const y of [-21,34]) box(-46,y,-80,198,6,6,frameMetal);
+      box(101,138,floor,8,8,62,frameMetal);
+      box(125,138,floor,8,8,62,frameMetal);
+      box(97,135,-43,42,17,4,frameMetal);
+      const block = (x,y,z) => box(x,y,z,24,25,13,work);
+      box(-53,-33,-10,212,74,7,dark);
+      box(-53,-33,-3,212,74,3,steel);
+      box(100,36,-5,31,98,5,steel,35);
+      box(100,36,0,2,98,4,chrome,35);
+      box(129,36,0,2,98,4,chrome,35);
+      box(94,134,-42,43,27,5,'#416980');
+      box(94,158,-42,43,4,20,'#416980');
+      box(133,134,-42,4,24,20,'#416980');
+      const delivered = completed || phase >= 3;
+      if (delivered) block(103,135,-37);
+      box(99,-31,0,26,33,3,dark);
+      cylinder('y',112,-28,11,28,9,steel);
+      box(102,-30,3,20,4,17,dark);
+      box(102,-3,3,20,5,17,dark);
+      cylinder('y',112,2,9.5,2+60*b,2.8,chrome);
+      box(100,4+60*b,2,24,4,13,steel);
+      // แขนกด (cam) ยื่นจากแผ่นดัน B ไปกดลูกกลิ้ง b1 เมื่อยืดสุด (สูงกว่าผนังนำทาง จึงไม่ชน)
+      box(124,4+60*b,11,14,4,3,dark);
+      box(127,4,0,4,31,10,steel);
+      // ชิ้นงานที่เหลือวางบนแท่งดัน (ram) ระหว่าง A ยืด และตกลงเมื่อแท่งดันถอยพ้นใต้ stack
+      const falling = phase === 3 ? clamp((progress-.9)/.1) : phase === 4 ? 1 : 0;
+      const stackBase = phase === 0 ? 0 : 13*(1-falling);
+      const stackCount = phase === 0 ? 4 : 3;
+      for (let index = 0; index < stackCount; index++) block(64,8,stackBase+13*index);
+      if (phase === 1 || phase === 2) {
+        const travel = phase === 2 ? progress : 0;
+        const slide = clamp((travel-28/60)/(1-28/60));
+        block(64+36*a+3*slide,8+Math.min(travel*60,28)+99*slide,-37*slide);
+      }
+      // กระบอก A ย้ายไปด้านหลัง เพื่อให้มีที่ให้แท่งดันยาวรองรับ stack
+      box(-43,7,0,65,26,3,dark);
+      cylinder('x',-40,20,10,61,9,steel);
+      box(-42,10,3,5,20,17,dark);
+      box(17,10,3,5,20,17,dark);
+      cylinder('x',22,20,9.5,2+36*a,2.8,chrome);
+      box(24+36*a,8,.5,40,25,12.5,steel);
+      for (const y of [4,35]) box(22,y,0,40,2,7,dark);
+      for (const [x,y] of [[-36,20],[12,20],[112,-24],[112,-8]]) {
+        box(x-2,y-2,18,4,4,4,dark);
+      }
+      box(25,-29,0,24,16,6,dark);
+      box(27,-27,6,10,12,4,steel);
+      box(38,-27,6,9,12,4,steel);
+      hose([[-36,20,22],[-36,13,22],[-30,-9,6],[14,-21,7],[29,-21,10]]);
+      hose([[12,20,22],[12,12,22],[18,-7,5],[34,-19,10]]);
+      hose([[112,-24,22],[103,-28,22],[91,-28,8],[62,-28,4],[46,-24,10]]);
+      hose([[112,-8,22],[100,-9,22],[90,-17,6],[65,-18,4],[46,-19,10]]);
+      // เสา stack ตั้งบนโต๊ะทั้ง 4 ต้น พร้อมฐานยึด (ชิ้นงานกว้าง y 8–33 จึงผ่านระหว่างเสาได้)
+      for (const [x,y] of [[62,6],[90,6],[90,35],[62,35]]) {
+        box(x-1,y-1,0,4,4,2,dark);
+        box(x,y,0,2,2,76,chrome);
+      }
+      for (const y of [6,35]) box(64,y,40,26,2,2,steel);
+      box(62,6,75,30,2,3,steel);
+      box(62,35,75,30,2,3,steel);
+      box(62,8,75,2,27,3,steel);
+      box(90,8,75,2,27,3,steel);
+      const signal = color('viz-series-4', '#9060bd');
+      const markers = [
+        ['a0',62,41,-28,24], ['a1',98,41,16,27],
+        ['b0',126,6,19,-13], ['b1',141,66,22,20]
+      ];
+      // ขายึด b1 ยื่นออกจากขอบโต๊ะ ข้างทางลาด (ไม่ขวางชิ้นงานที่ไถลลง)
+      // ชนขอบโต๊ะพอดี (y=41) ไม่ซ้อนทับผิวโต๊ะ เพื่อไม่ให้ผิวกระพริบ (z-fighting) ตอนหมุนกล้อง
+      box(134,41,-4,14,31,4,frameMetal);
+      box(134,41,-14,14,3,10,frameMetal);
+      for (const [name,x,y] of markers) {
+        box(x-4,y-4,0,8,8,2,steel);
+        box(x-3,y-3,2,6,6,5,limits[name]?signal:dark);
+        cylinder('x',x-2.5,y,8,5,1.6,chrome);
+      }
+      if (renderer && !gl.isContextLost()) paintWithDepth();
+      else paintScene();
+      function sceneLabel(name, point, dx = 0, dy = 0, active = false, leader = false) {
+        const [px,py] = project(point);
+        const x = px+dx, y = py+dy;
+        if (leader) line(scene,[[px,py],[x,y-4]],active?signal:neutral,active?2:1);
+        scene.font = '600 13px system-ui, sans-serif';
+        scene.textAlign = 'center';
+        scene.strokeStyle = color('background','#fff');
+        scene.lineWidth = 3;
+        const caption = name+(active?' ●':'');
+        scene.strokeText(caption,x,y);
+        label(scene,caption,x,y,'center');
+      }
+      sceneLabel('Stack',[76,20,76],0,-7);
+      sceneLabel('A',[-15,20,22],0,-6);
+      sceneLabel('B',[112,-15,21],0,-6);
+      sceneLabel('ทางลาด',[111,94,-19],-24,10);
+      sceneLabel('กล่องรับ',[117,148,-20],4,18);
+      for (const [name,x,y,dx,dy] of markers) {
+        sceneLabel(name,[x,y,8],dx,dy,limits[name],true);
+      }
+
+      const startPulse = phase === 1 && (lead > 0 || progress < .16);
+      updateCircuit({
+        a, b, ...limits, start:startPulse && limits.b0,
+        extA:phase === 1 || phase === 2, extB:phase === 2 || phase === 3
+      });
+      updateFocus();
+    }
+    new ResizeObserver(draw).observe(root);
+    draw();
+  })();
+  </script>
+</div>
+</main></body>
+</html>

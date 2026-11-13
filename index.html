@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>แบบจำลองนิวแมติกส์ประกอบตำรา</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7fb;color:#18293d;font:16px/1.6 "Leelawadee UI",Tahoma,system-ui,sans-serif}
+main{max-width:980px;margin:auto;padding:clamp(18px,4vw,48px)}
+.eyebrow{font-size:12px;letter-spacing:.16em;font-weight:700;color:#0a6e8a}
+h1{font-size:clamp(25px,4vw,38px);line-height:1.25;margin:6px 0 10px}
+.lead{color:#4c6077;margin:0 0 26px;max-width:60ch}
+.cards{display:grid;gap:14px}
+a.card{display:grid;grid-template-columns:86px 1fr;gap:16px;align-items:start;padding:18px;background:#fff;border:1px solid #d3dfea;border-radius:12px;color:inherit;text-decoration:none;transition:border-color .15s,box-shadow .15s}
+a.card:hover{border-color:#0a6e8a;box-shadow:0 4px 14px #0a6e8a1f}
+a.card:focus-visible{outline:3px solid #0a6e8a;outline-offset:3px}
+.tag{font-weight:700;font-size:14px;text-align:center;padding:10px 4px;border-radius:8px;background:#e3f1f6;color:#0a5b72}
+h2{font-size:19px;margin:0 0 4px}
+.card p{margin:0;color:#4c6077}
+.seq{font-family:Consolas,monospace;font-weight:700;color:#18293d}
+footer{margin-top:30px;padding-top:16px;border-top:1px solid #d3dfea;font-size:14px;color:#5b6e83}
+@media(max-width:560px){a.card{grid-template-columns:1fr}.tag{justify-self:start;padding:4px 10px}}
+</style>
+</head>
+<body><main>
+<div class="eyebrow">PNEUMATICS LAB</div>
+<h1>แบบจำลองนิวแมติกส์ประกอบตำรา</h1>
+<p class="lead">แบบจำลองแบบโต้ตอบประกอบตำรา ระบบอัตโนมัติด้วยนิวแมติกส์และไฟฟ้านิวแมติกส์ เปิดใช้ได้ในเบราว์เซอร์บนคอมพิวเตอร์หรือมือถือ ไม่ต้องติดตั้งโปรแกรม</p>
+<div class="cards">
+<a class="card" href="sorting.html">
+<div class="tag">รูปที่ 6.1</div>
+<div><h2>ห้องทดลองคัดแยกชิ้นงาน</h2>
+<p>กระบอกลมหนึ่งตัวกับลอจิกด้วยวาล์วลม ได้แก่ AND, NOT, วาล์วหน่วงเวลา และวาล์วไพลอตสองด้านที่จำตำแหน่ง · บทที่ 6 หัวข้อ 6.1</p></div>
+</a>
+<a class="card" href="transfer.html">
+<div class="tag">รูปที่ 6.2</div>
+<div><h2>สถานีส่งชิ้นงาน <span class="seq">A+ B+ A− B−</span></h2>
+<p>วงจรลมล้วนที่ไม่มีสัญญาณซ้อน ลิมิตวาล์ว a0 a1 b0 b1 สั่งตรงได้ · บทที่ 6 หัวข้อ 6.3</p></div>
+</a>
+<a class="card" href="clamp-punch.html">
+<div class="tag">รูปที่ 8.2</div>
+<div><h2>เครื่องหนีบและปั๊มเจาะ <span class="seq">A+ B+ B− A−</span></h2>
+<p>กระบอกลมสองตัวกับลิมิตสวิตช์ไฟฟ้า เดินทีละขั้นตาม GRAFCET ในรูปที่ 8.1 · บทที่ 8 หัวข้อ 8.3</p></div>
+</a>
+</div>
+<footer>ผศ. ดร.ธนสาร อินทรกำธรชัย · ภาควิชาวิศวกรรมอุตสาหการ คณะวิศวกรรมศาสตร์ มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ<br>การเคลื่อนที่และเวลาในแบบจำลองใช้เพื่อการสอน</footer>
+</main></body>
+</html>

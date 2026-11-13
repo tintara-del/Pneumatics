@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ห้องทดลองคัดแยกชิ้นงาน</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0c1321;color:#e8eef8;font:15px "Leelawadee UI",Tahoma,sans-serif}main{max-width:1440px;margin:auto;padding:28px clamp(14px,3vw,48px)}header{margin-bottom:24px}h1{font-size:clamp(26px,4vw,42px);margin:5px 0 8px;letter-spacing:-.025em}p{margin:0;color:#a9bbd3;line-height:1.6}.eyebrow{font-size:12px;letter-spacing:.18em;color:#68e1c4;font-weight:bold}.panels{display:grid;grid-template-columns:1.06fr 1fr;gap:16px}.panel,.controls,.status{background:#111d30;border:1px solid #263952;border-radius:14px;overflow:hidden}.panel h2{margin:0;padding:14px 17px;font-size:16px;border-bottom:1px solid #263952}.canvas-wrap{background:#0f192a}canvas{display:block;width:100%;height:auto}.legend{padding:10px 16px;display:flex;flex-wrap:wrap;gap:12px;color:#a9bbd3;font-size:13px}.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.controls{margin-top:16px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}button,select{font:inherit;color:inherit;border:1px solid #3c526e;border-radius:8px;background:#182a42;padding:8px 12px;cursor:pointer}button:hover,select:hover{background:#233b55}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #68e1c4;outline-offset:3px}#play{background:#72e5c9;color:#0c2428;font-weight:bold;border-color:#72e5c9;min-width:94px}.slider{display:flex;align-items:center;gap:7px;color:#b8c9de}input{width:92px;accent-color:#72e5c9}.status{margin-top:14px;padding:13px 16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.status strong{color:#79e6cc}details{color:#a9bbd3;margin:18px 0;line-height:1.65}summary{cursor:pointer;color:#dbe7f6}@media(max-width:800px){.panels{grid-template-columns:1fr}}
+</style></head><body><main>
+<nav style="font-size:14px;margin-bottom:10px"><a href="./" style="color:#8fd8ff;text-decoration:none">← แบบจำลองทั้งหมด · ตำราระบบอัตโนมัติด้วยนิวแมติกส์</a></nav>
+<header><div class="eyebrow">PNEUMATICS LAB</div><h1>ห้องทดลองคัดแยกชิ้นงาน</h1><p>ติดตามชิ้นงานในแบบจำลอง 3D และดูสัญญาณลมที่สั่งให้รางเปลี่ยนทางพร้อมกัน</p></header>
+<div class="panels">
+<section class="panel"><h2>เครื่องคัดแยก 3D</h2><div class="canvas-wrap"><canvas id="machine" width="660" height="445" role="img" aria-label="แบบจำลองสามมิติของรางคัดแยก วาล์วลูกกลิ้ง และกระบอกลม"></canvas></div><div class="legend"><span><i style="background:#55e6c6"></i>ชิ้นเตี้ย → I</span><span><i style="background:#ffca75"></i>ชิ้นสูง → II</span></div></section>
+<section class="panel"><h2>วงจรลม</h2><div class="canvas-wrap"><canvas id="circuit" width="660" height="445" role="img" aria-label="ไดอะแกรมแสดงสถานะวาล์วและเส้นทางลม"></canvas></div><div class="legend"><span><i style="background:#56d8fb"></i>ลมจ่าย</span><span><i style="background:#ffd071"></i>สัญญาณควบคุม</span><span><i style="background:#d2a7ff"></i>ทางระบาย</span></div></section>
+</div>
+<div class="controls"><label>ชิ้นงาน <select id="kind"><option value="short">ชิ้นเตี้ย</option><option value="tall">ชิ้นสูง</option></select></label><button id="play">▶ เล่น</button><button id="step">เดินทีละขั้น</button><button id="reset">เริ่มใหม่</button><label class="slider">ความเร็ว <input id="speed" type="range" min="0.5" max="2.5" step="0.1" value="1"><output id="speedValue"></output></label><label class="slider">เวลาหน่วง <input id="delay" type="range" min="0" max="1.5" step="0.1" value="0.3"><output id="delayValue"></output></label></div>
+<div class="status" role="status"><strong id="phase"></strong><span id="message"></span></div>
+<details><summary>อ่านวงจรและทดลองปรับจังหวะ</summary><p>แบบจำลองใช้ 1.3 ตรวจว่ามีชิ้นงาน และใช้ 1.2 เป็นวาล์วเลือกช่อง I สำหรับชิ้นเตี้ย เมื่อชิ้นสูงกด 1.2 ทางสัญญาณไปช่อง I จะถูกตัด และ 1.5 จะส่งสัญญาณไปช่อง II เมื่อครบเวลาหน่วง วาล์ว 1.1 แบบไพลอตสองด้านค้างคำสั่งล่าสุดไว้หลังสัญญาณหาย กดเล่นหลังจบรอบเพื่อป้อนชิ้นถัดไปโดยใช้ตำแหน่งรางล่าสุด</p><p>ลองเพิ่มความเร็วหรือตั้งเวลาหน่วงให้นานขึ้น แล้วดูว่าชิ้นสูงมาถึงก่อนรางเข้าตำแหน่งหรือไม่ แบบจำลองให้คำสั่งช่อง I มีลำดับก่อนเมื่อชิ้นเตี้ยกดค้าง การเคลื่อนที่และเวลาที่แสดงใช้สำหรับการสอน</p></details>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const colors={ink:"#dae8f7",muted:"#9bb0ca",idle:"#4d6480",air:"#56d8fb",pilot:"#ffd071",vent:"#d2a7ff"};
+const machine=$("machine").getContext("2d");
+const circuit=$("circuit").getContext("2d");
+const station={gate:5.9,end:10.65,rate:1.65,run:2.5,offset:1.45};
+const part={halfLength:.32,halfWidth:.35,short:.35,tall:.84};
+const roller={radius:.13,rest:-.40,trip:.055};
+const switches=[{id:"1.3",x:3.55,z:.23},{id:"1.2",x:3.55,z:.66}];
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const ease=t=>t*t*(3-2*t);
+const railAngle=Math.atan2(station.offset,station.run);
+const railLength=Math.hypot(station.run,station.offset);
+function contact(s,sensor){
+  if(part[s.kind]<sensor.z)return 0;
+  const gap=Math.max(0,Math.abs(s.x-sensor.x)-part.halfLength);
+  const reach=Math.sqrt(Math.max(0,roller.radius**2-gap**2));
+  return Math.max(0,roller.rest+part.halfWidth+reach);
+}
+const states=["ป้อนชิ้นงาน","ตรวจชิ้นงาน","ประมวลผลสัญญาณ","สั่งกระบอกลม","ถึงรางสับทาง","จบรอบ"];
+function newCycle(kind,gate=0,target=0){
+  return {kind,gate,stroke:gate,target,x:0,sensed:0,detect:false,high:false,left:false,right:false,arrival:null,failed:false,phase:0,done:false};
+}
+function advance(s,dt,speed,delay){
+  if(s.done)return;
+  if(!s.failed)s.x=Math.min(station.end,s.x+station.rate*speed*dt);
+  s.detect=contact(s,switches[0])>=roller.trip;
+  s.high=contact(s,switches[1])>=roller.trip;
+  s.sensed=s.detect?s.sensed+dt:0;
+  const timer=s.detect&&s.sensed>=delay;
+  s.left=s.detect&&!s.high;
+  s.right=timer;
+  // The teaching model assumes that the short-part command takes priority.
+  if(s.left)s.target=0;
+  else if(s.right)s.target=1;
+  const remaining=s.target-s.stroke;
+  s.stroke+=Math.sign(remaining)*Math.min(Math.abs(remaining),dt/.53);
+  s.gate=ease(s.stroke);
+  if(s.detect&&s.phase<1)s.phase=1;
+  else if(s.phase===1&&(s.sensed>=0.09||!s.detect))s.phase=2;
+  else if(s.phase===2&&((s.left&&s.sensed>=0.16)||s.right||!s.detect))s.phase=3;
+  if(s.x>=station.gate-part.halfLength&&s.arrival===null){
+    s.arrival=s.gate>=0.5?1:0;
+    s.failed=Math.min(s.gate,1-s.gate)>0.04||s.arrival!==Number(s.kind==="tall");
+    if(s.failed)s.x=station.gate-part.halfLength;
+    s.phase=4;
+  }
+  else if(s.x>=station.end||(s.phase===4&&s.failed)){
+    s.phase=5;s.done=true;
+  }
+}
+function line(ctx,points,color,width=2){
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin="round";ctx.lineCap="round";ctx.beginPath();
+  points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();
+}
+function label(ctx,value,x,y,color=colors.ink,size=15){
+  ctx.fillStyle=color;ctx.font="600 "+size+"px Leelawadee UI, Tahoma, sans-serif";ctx.fillText(value,x,y);
+}
+function circle(ctx,x,y,r,color){ctx.beginPath();ctx.arc(x,y,r,0,2*Math.PI);ctx.fillStyle=color;ctx.fill();}
+function face(points,fill){
+  const p=points.map(project);
+  machine.beginPath();p.forEach(([x,y],i)=>i?machine.lineTo(x,y):machine.moveTo(x,y));
+  machine.closePath();machine.fillStyle=fill;machine.fill();
+  machine.strokeStyle="#0e2032";machine.lineWidth=1;machine.stroke();
+}
+function project([x,y,z]){return [77+x*46-y*25,213+x*9+y*20-z*45];}
+function beam(x1,y1,x2,y2,z,w,h,palette){
+  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);
+  const ox=-dy*w/(2*len),oy=dx*w/(2*len);
+  const a=[x1+ox,y1+oy,z],b=[x2+ox,y2+oy,z],c=[x2-ox,y2-oy,z],d=[x1-ox,y1-oy,z];
+  const down=p=>[p[0],p[1],p[2]-h];
+  face([a,b,down(b),down(a)],palette[1]);face([b,c,down(c),down(b)],palette[2]);face([d,c,b,a],palette[0]);
+}
+const steel=["#567b99","#28445f","#345572"],rail=["#96b3c5","#52758e","#708da5"];
+function track(x1,y1,x2,y2,z,width=1.3){
+  beam(x1,y1,x2,y2,z,width,.24,steel);
+  const len=Math.hypot(x2-x1,y2-y1),dx=-(y2-y1)/len,dy=(x2-x1)/len;
+  for(const side of [-1,1]){
+    const off=side*(width/2-.06);
+    beam(x1+dx*off,y1+dy*off,x2+dx*off,y2+dy*off,z+.16,.10,.17,rail);
+  }
+}
+function drawPart(s){
+  const direction=s.arrival===1?-1:1;
+  const distance=s.x-station.gate;
+  const u=clamp(distance/station.run,0,1);
+  const y=direction*station.offset*u;
+  const turn=ease(clamp(distance/.38,0,1))*ease(clamp((station.run-distance)/.38,0,1));
+  const angle=direction*railAngle*turn;
+  const dx=part.halfLength*Math.cos(angle),dy=part.halfLength*Math.sin(angle);
+  const palette=s.kind==="tall"?["#ffd081","#b77730","#dd9a46"]:["#5aebca","#248a81","#37baaa"];
+  beam(s.x-dx,y-dy,s.x+dx,y+dy,part[s.kind],2*part.halfWidth,part[s.kind],palette);
+}
+function drawSwitch(s,sensor){
+  const {id,x,z}=sensor;
+  const travel=contact(s,sensor);
+  const on=travel>=roller.trip;
+  // The arm pivots above the roller, so sideways travel also lifts it slightly.
+  const pivotY=-.87,pivotZ=z+.43;
+  const wheelY=roller.rest-travel;
+  const length=Math.hypot(roller.rest-pivotY,z-pivotZ);
+  const wheelZ=pivotZ-Math.sqrt(length**2-(wheelY-pivotY)**2);
+  const pivot=project([x,pivotY,pivotZ]);
+  const wheel=project([x,wheelY,wheelZ]);
+  const body=on?["#ffe399","#a66a28","#c99239"]:steel;
+  beam(x-.16,-1.14,x+.16,-1.14,pivotZ+.30,.28,pivotZ+.30,steel);
+  beam(x-.22,-1,x+.22,-1,pivotZ+.19,.34,.26,body);
+  line(machine,[pivot,wheel],on?colors.pilot:"#afc3d5",4);
+  circle(machine,...pivot,3,"#233a50");
+  circle(machine,...wheel,6,on?"#ffe5a4":"#bdcddd");
+  circle(machine,...wheel,2,"#344d66");
+  const [lx,ly]=project([x,-1.30,pivotZ+.30]);
+  label(machine,id,lx-10+(id==="1.2"?14:-22),ly,on?colors.pilot:colors.ink,14);
+}
+const joint=["#a5bbc9","#46647a","#67869a"];
+function pin(x,y,z,radius){
+  const rim=Array.from({length:24},(_,i)=>{
+    const angle=i*Math.PI/12;
+    return [x+radius*Math.cos(angle),y+radius*Math.sin(angle),z];
+  });
+  face(rim.map(([px,py,pz])=>[px,py,pz-.07]),joint[1]);
+  face(rim,joint[0]);
+  circle(machine,...project([x,y,z]),2.5,"#344d62");
+}
+function drawCylinder(angle){
+  const anchor=[6.2,3.6,-1.35];
+  const rodVector=rotation=>[
+    station.gate+1.7*Math.cos(rotation)-anchor[0],
+    1.7*Math.sin(rotation)+.53-anchor[1],
+    -.34-anchor[2]
+  ];
+  const vector=rodVector(angle);
+  const span=Math.hypot(...vector);
+  const at=distance=>project(anchor.map((value,i)=>value+vector[i]*distance/span));
+  const rear=at(0),cap=at(1.45),tip=at(span);
+  const bodyStart=at(.18),bodyEnd=at(1.33);
+  const axial=[tip[0]-rear[0],tip[1]-rear[1]];
+  const length=Math.hypot(...axial);
+  const normal=[-axial[1]/length,axial[0]/length];
+  const offset=(point,n)=>point.map((value,i)=>value+n*normal[i]);
+  const port=at(1.13);
+  line(machine,[offset(port,12),offset(port,24),offset(at(.35),31)],"#293f56",4);
+  line(machine,[rear,cap],"#07111e",26);
+  line(machine,[cap,tip],"#172b3e",11);
+  line(machine,[cap,tip],"#a8c6d8",7);
+  line(machine,[offset(cap,1.5),offset(tip,1.5)],"#eefaff",2);
+  line(machine,[bodyStart,bodyEnd],"#367da1",22);
+  line(machine,[offset(bodyStart,-5),offset(bodyEnd,-5)],"#64b3d0",5);
+  for(const center of [rear,cap]){
+    line(machine,[offset(center,-12),offset(center,12)],"#638197",9);
+    line(machine,[offset(center,-10),offset(center,10)],"#a6bfd0",2);
+  }
+  for(const center of [rear,tip]){
+    circle(machine,...center,7,"#58788d");
+    circle(machine,...center,3,"#15263a");
+  }
+  const minSpan=Math.hypot(...rodVector(railAngle));
+  const maxSpan=Math.hypot(...rodVector(-railAngle));
+  const extended=Math.round(100*clamp((span-minSpan)/(maxSpan-minSpan),0,1));
+  const [x,y]=rear;
+  line(machine,[[x-8,y+6],[x-34,y+26],[x-75,y+26]],colors.idle,1);
+  label(machine,"1.0 กระบอกลม",x-180,y+21,colors.air,14);
+  label(machine,"ระยะยืด "+extended+"%",x-180,y+40,colors.muted,13);
+}
+function drawMachine(s){
+  machine.clearRect(0,0,660,445);
+  for(let i=-1;i<=12;i++)line(machine,[project([i,-3,-1.4]),project([i,3,-1.4])],"#1b2b41",1);
+  for(let i=-3;i<=3;i++)line(machine,[project([-1,i,-1.4]),project([12,i,-1.4])],"#1b2b41",1);
+  for(const x of [0.6,4.8,9.4]){
+    beam(x-.11,0,x+.11,0,0,.22,1.35,steel);
+  }
+  track(0,0,station.gate-.15,0,0);
+  const outlet=station.gate+station.run;
+  for(const y of [-station.offset,station.offset]){
+    track(outlet+.08,y,11,y,0);
+    beam(outlet+.05,y,outlet+.21,y,.018,1.18,.08,joint);
+    for(const side of [-1,1]){
+      pin(outlet+.17,y+side*.50,.026,.042);
+    }
+  }
+  const angle=railAngle*(1-2*s.gate);
+  const along=distance=>[station.gate+distance*Math.cos(angle),distance*Math.sin(angle)];
+  track(...along(.15),...along(railLength-.06),0);
+  beam(...along(railLength-.22),...along(railLength-.025),.016,1.15,.10,joint);
+  beam(station.gate-.21,0,station.gate+.21,0,-.035,1.18,.14,joint);
+  pin(station.gate,0,-.019,.22);
+  drawCylinder(angle);
+  for(const sensor of switches)drawSwitch(s,sensor);
+  drawPart(s);
+  label(machine,"ทางป้อน",34,186,colors.muted);
+  label(machine,"II",603,253,s.gate>.96?colors.pilot:colors.muted,21);
+  label(machine,"I",586,348,s.gate<.04?"#5aebca":colors.muted,21);
+}
+function valve(x,y,w,h,active,number,leftPaths,rightPaths){
+  const ctx=circuit;
+  ctx.fillStyle="#15233a";ctx.fillRect(x,y,w*2,h);
+  ctx.fillStyle="#233d53";ctx.fillRect(x+active*w,y,w,h);
+  ctx.strokeStyle=colors.idle;ctx.lineWidth=1.5;ctx.strokeRect(x,y,w*2,h);
+  ctx.strokeRect(x+active*w,y,w,h);
+  line(ctx,[[x+w,y],[x+w,y+h]],colors.idle);
+  for(const [cell,paths] of [[0,leftPaths],[1,rightPaths]]){
+    for(const [a,b,color] of paths){
+      const offset=x+cell*w;
+      arrow([offset+a[0]*w,y+a[1]*h],[offset+b[0]*w,y+b[1]*h],cell===active?color:colors.idle);
+    }
+  }
+  label(ctx,number,x,y-8);
+}
+function arrow(a,b,color){
+  line(circuit,[a,b],color,2);
+  const angle=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  line(circuit,[[b[0]-7*Math.cos(angle-.48),b[1]-7*Math.sin(angle-.48)],b,[b[0]-7*Math.cos(angle+.48),b[1]-7*Math.sin(angle+.48)]],color,2);
+}
+function drawCircuit(s){
+  const c=circuit; c.clearRect(0,0,660,445);
+  const {air,pilot,vent,idle}=colors;
+  const a=s.target===1;
+  const signal=on=>on?pilot:idle;
+  const wire=(points,color)=>line(c,points,color,2.6);
+  const path=(ax,ay,bx,by,col)=>[[ax,ay],[bx,by],col];
+  const flow=[path(.27,.88,.27,.12,air),path(.73,.12,.73,.88,vent)];
+  const cross=[path(.27,.88,.73,.12,air),path(.27,.12,.73,.88,vent)];
+  const opened=[path(.3,.88,.3,.12,pilot)];
+  const closed=[path(.3,.12,.72,.88,vent)];
+  const exhaust=(x,y)=>line(c,[[x-6,y],[x+6,y],[x,y+10],[x-6,y]],vent,1.6);
+  const w=55;
+  const mainX=a?320:265;
+  const sensorX=s.detect?510:565;
+  const selectorX=s.high?98:43;
+  const timerX=s.right?490:545;
+  const exhaustMain=mainX+.73*w;
+  wire([[65,404],[620,404]],air);circle(c,56,404,7,air);
+  label(c,"แหล่งจ่ายลม",35,431,colors.muted,13);
+  wire([[mainX+.27*w,176],[mainX+.27*w,224],[360,224],[360,404]],air);
+  wire([[exhaustMain,176],[exhaustMain,198]],vent);exhaust(exhaustMain,198);
+  wire([[mainX+.27*w,132],[mainX+.27*w,108],[274,108],[274,81]],a?vent:air);
+  wire([[mainX+.73*w,132],[mainX+.73*w,96],[397,96],[397,81]],a?air:vent);
+  c.fillStyle="#193451";c.fillRect(255,43,164,38);
+  const piston=377-76*s.gate;
+  c.fillStyle=a?"#293456":"#24566a";c.fillRect(256,44,piston-256,36);
+  c.fillStyle=a?"#24566a":"#293456";c.fillRect(piston,44,418-piston,36);
+  c.strokeStyle=colors.ink;c.strokeRect(255,43,164,38);
+  wire([[piston,46],[piston,78]],colors.ink);
+  wire([[piston,62],[445,62]],colors.ink);
+  label(c,"1.0  กระบอกลมสองทาง",255,28);
+  wire([[selectorX+.3*w,317],[selectorX+.3*w,154],[265,154]],signal(s.left));
+  wire([[timerX+.3*w,241],[timerX+.3*w,154],[375,154]],signal(s.right));
+  wire([[sensorX+.3*w,317],[sensorX+.3*w,293],[466,293],[466,376],[selectorX+.3*w,376],[selectorX+.3*w,359]],signal(s.detect));
+  wire([[466,293],[timerX+.3*w,293],[timerX+.3*w,283]],signal(s.detect));
+  wire([[sensorX+.3*w,359],[sensorX+.3*w,404]],air);
+  wire([[466,293],[420,293],[420,262],[433,262]],signal(s.detect));
+  wire([[450,262],[490,262]],signal(s.right));
+  line(c,[[434,254],[442,262],[434,270],[449,270],[442,262],[449,254],[434,254]],signal(s.detect),1.6);
+  circle(c,466,293,3,signal(s.detect));
+  valve(265,132,w,44,Number(a),"1.1  วาล์วไพลอตสองด้าน",flow,cross);
+  valve(43,317,w,42,Number(s.high),"1.2  เลือกช่อง I",opened,closed);
+  valve(510,317,w,42,Number(!s.detect),"1.3  ตรวจชิ้นงาน",opened,closed);
+  valve(490,241,w,42,Number(!s.right),"1.5  หน่วงเวลา",opened,closed);
+  for(const [x,y] of [[selectorX,359],[sensorX,359],[timerX,283]]){
+    wire([[x+.72*w,y],[x+.72*w,y+8]],vent);exhaust(x+.72*w,y+8);
+  }
+  label(c,"ไพลอต I",186,145,signal(s.left),13);
+  label(c,"ไพลอต II",388,145,signal(s.right),13);
+}
+const kind=$("kind"),play=$("play"),speed=$("speed"),delay=$("delay");
+const soundButton=document.createElement("button");
+soundButton.type="button";
+soundButton.textContent="เสียงเครื่อง";
+soundButton.setAttribute("aria-pressed","true");
+$("reset").after(soundButton);
+let soundEnabled=true;
+let sound;
+function prepareSound(){
+  if(!soundEnabled||!window.AudioContext)return;
+  if(!sound){
+    const context=new AudioContext();
+    const output=context.createGain();
+    output.gain.value=.55;
+    output.connect(context.destination);
+    const noise=context.createBuffer(1,context.sampleRate,context.sampleRate);
+    const samples=noise.getChannelData(0);
+    for(let i=0;i<samples.length;i++)samples[i]=Math.random()*2-1;
+    const air=context.createBufferSource();
+    air.buffer=noise;
+    air.loop=true;
+    const filter=context.createBiquadFilter();
+    filter.type="bandpass";
+    filter.frequency.value=1550;
+    const airGain=context.createGain();
+    airGain.gain.value=0;
+    air.connect(filter).connect(airGain).connect(output);
+    air.start();
+    sound={context,output,airGain,airOn:false};
+  }
+  if(sound.context.state==="suspended")sound.context.resume().catch(()=>{});
+}
+function setAir(on){
+  if(!sound||sound.airOn===on)return;
+  sound.airOn=on;
+  sound.airGain.gain.setTargetAtTime(on?.19:0,sound.context.currentTime,on?.026:.035);
+}
+function tap(frequency,duration,volume){
+  if(!soundEnabled||!sound||sound.context.state!=="running")return;
+  const {context,output}=sound;
+  const time=context.currentTime;
+  const tone=context.createOscillator();
+  const envelope=context.createGain();
+  tone.type="triangle";
+  tone.frequency.setValueAtTime(frequency,time);
+  tone.frequency.exponentialRampToValueAtTime(frequency*.45,time+duration);
+  envelope.gain.setValueAtTime(volume,time);
+  envelope.gain.exponentialRampToValueAtTime(.001,time+duration);
+  tone.connect(envelope).connect(output);
+  tone.start(time);
+  tone.stop(time+duration);
+}
+soundButton.onclick=()=>{
+  soundEnabled=!soundEnabled;
+  soundButton.setAttribute("aria-pressed",String(soundEnabled));
+  if(soundEnabled)prepareSound();
+  if(sound)sound.output.gain.setTargetAtTime(soundEnabled?.55:0,sound.context.currentTime,.015);
+  if(!soundEnabled)setAir(false);
+};
+let state=newCycle(kind.value),running=false,lastTime=null,frame=0,stepFrom=null;
+let lastStatus="";
+function render(){
+  drawMachine(state);drawCircuit(state);
+  $("speedValue").value=Number(speed.value).toFixed(1)+"×";
+  $("delayValue").value=Number(delay.value).toFixed(1)+" วิ";
+  play.textContent=running?"❚❚ พัก":state.done?"▶ ชิ้นถัดไป":"▶ เล่น";
+  const notes=[
+    "ชิ้นงานเคลื่อนไปยังชุดตรวจแบบลูกกลิ้ง",
+    state.kind==="tall"?"ชิ้นสูงกดทั้ง 1.3 และ 1.2":"ชิ้นเตี้ยกดเฉพาะ 1.3",
+    state.kind==="tall"?"1.2 ตัดทางไปไพลอต I และชุด 1.5 เริ่มหน่วง":"สัญญาณผ่าน 1.2 ไปยังไพลอต I",
+    "วาล์ว 1.1 สั่งรางไปช่อง "+(state.target?"II":"I"),
+    state.failed?"รางเข้าตำแหน่งไม่ทันหรือยังอยู่ผิดช่อง":"ชิ้นงานกำลังผ่านรางไปช่อง "+(state.arrival?"II":"I"),
+    state.failed?"คัดแยกไม่สำเร็จ ลองลดความเร็วหรือเวลาหน่วง":"คัดแยกสำเร็จ ชิ้นงานออกช่อง "+(state.arrival?"II":"I")
+  ];
+  const status=state.phase+notes[state.phase];
+  if(status!==lastStatus){
+    $("phase").textContent=states[state.phase];
+    $("message").textContent=notes[state.phase];
+    lastStatus=status;
+  }
+}
+function tick(time){
+  if(!running)return;
+  const dt=lastTime===null?0:Math.max(0,Math.min((time-lastTime)/1000,0.05));
+  lastTime=time;
+  let remaining=dt;
+  let moved=false;
+  while(remaining>0&&running){
+    const slice=Math.min(remaining,1/120);
+    const {stroke,detect,high,done}=state;
+    advance(state,slice,Number(speed.value),Number(delay.value));
+    moved ||= stroke!==state.stroke;
+    if(detect!==state.detect)tap(state.detect?1200:780,.035,.19);
+    if(high!==state.high)tap(state.high?1550:950,.035,.14);
+    if(stroke!==state.stroke&&state.stroke===state.target)tap(210,.12,.28);
+    if(!done&&state.done&&state.failed)tap(115,.13,.24);
+    remaining-=slice;
+    if(state.done||(stepFrom!==null&&state.phase!==stepFrom))running=false;
+  }
+  setAir(soundEnabled&&running&&moved&&state.stroke!==state.target);
+  render();
+  if(running)frame=requestAnimationFrame(tick);
+}
+function beginIfDone(){
+  if(state.done)state=newCycle(kind.value,state.gate,state.target);
+}
+play.onclick=()=>{
+  beginIfDone();
+  running=!running;lastTime=null;stepFrom=null;
+  if(running)prepareSound();
+  else{cancelAnimationFrame(frame);setAir(false);}
+  render();
+  if(running)frame=requestAnimationFrame(tick);
+};
+$("step").onclick=()=>{
+  prepareSound();
+  cancelAnimationFrame(frame);
+  beginIfDone();
+  stepFrom=state.phase;
+  running=true;lastTime=null;
+  render();
+  frame=requestAnimationFrame(tick);
+};
+$("reset").onclick=()=>{
+  setAir(false);
+  running=false;cancelAnimationFrame(frame);state=newCycle(kind.value);render();
+};
+kind.onchange=()=>{
+  setAir(false);
+  if(!state.done){running=false;cancelAnimationFrame(frame);state=newCycle(kind.value,state.gate,state.target);}
+  render();
+};
+speed.oninput=delay.oninput=render;
+render();
+</script></main></body></html>

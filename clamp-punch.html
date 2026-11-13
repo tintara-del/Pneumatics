@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>เครื่องหนีบและปั๊มเจาะ | Pneumatic Lab</title>
+<style>
+:root{color-scheme:dark;--bg:#101419;--panel:#1a2129;--line:#34414e;--ink:#f1f5f9;--muted:#b1bfcc;--accent:#ffc069;--green:#90e6af}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Leelawadee UI",Tahoma,system-ui,sans-serif}
+main{max-width:1360px;margin:auto;padding:24px clamp(12px,3vw,36px)}header{margin-bottom:17px}header small{color:var(--accent);font-weight:bold;letter-spacing:.17em}h1{font-size:clamp(23px,3vw,36px);margin:3px 0}p{margin:6px 0;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:15px}.panel,.scene{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}.scene{min-width:0;display:flex;flex-direction:column}.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#202933}.views{display:flex;gap:5px}.views button{min-height:33px;padding:4px 8px}.scene canvas{display:block;width:100%;flex:1 0 auto;min-height:clamp(510px,70vh,780px);touch-action:none;cursor:grab;background:radial-gradient(ellipse at 50% 42%,#394855,#182129 76%)}.scene canvas:active{cursor:grabbing}
+.legend{display:flex;flex-wrap:wrap;gap:9px 18px;padding:11px 14px;color:var(--muted);font-size:13px}.legend b{color:var(--ink)}.blue{color:#78bbff}.orange{color:#ffb15d}.lime{color:#a7ec89}
+aside{display:grid;gap:12px;align-content:start}section.panel,details.panel{padding:13px}h2{font-size:16px;margin:0 0 8px}button,select,input{font:inherit;color:inherit;background:#26323e;border:1px solid #465769;border-radius:7px;padding:7px 9px;min-height:39px}button{cursor:pointer;font-weight:bold}button:hover:not(:disabled){border-color:#a8c2dc}button:disabled{opacity:.43;cursor:default}.primary{background:var(--accent);color:#251708;border-color:var(--accent)}.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.wide{grid-column:1/-1}label{display:block;color:var(--muted);font-size:13px}select,input{width:100%;margin-top:3px}
+.signal,.sequence{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.signal div,.sequence div{padding:6px 3px;text-align:center;background:#111920;border:1px solid var(--line);border-radius:6px;font:700 13px/1.4 Consolas,monospace}.signal small{display:block;color:var(--muted);font:11px Tahoma,sans-serif}.signal .on{color:var(--green);border-color:#61b781;background:#1a362a}.sequence .active{color:var(--accent);border-color:var(--accent)}.sequence .done{color:var(--green)}.status{min-height:49px;margin-top:8px;color:var(--ink)}.sub{font-size:13px}#inspection{display:block;width:100%;height:auto;background:#121a22;border-radius:6px}.endpoint{margin:7px 0}.mono{font-family:Consolas,monospace;overflow-wrap:anywhere;color:#d5e7f8}summary{cursor:pointer;font-weight:bold}details p{font-size:13px}code{color:#d2e7fc}footer{margin-top:13px;color:var(--muted);font-size:13px}@media(max-width:790px){.layout{grid-template-columns:1fr}.scene canvas{min-height:440px}}
+</style>
+</head>
+<body><main>
+<nav style="font-size:14px;margin-bottom:10px"><a href="./" style="color:#ffc069;text-decoration:none">← แบบจำลองทั้งหมด · ตำราระบบอัตโนมัติด้วยนิวแมติกส์</a></nav>
+<header><small>PNEUMATIC LAB</small><h1>เครื่องหนีบและปั๊มเจาะชิ้นงาน</h1><p>กระบอกลมสองตัวกับลิมิตสวิตช์ไฟฟ้าแบบก้านลูกกลิ้ง</p></header>
+<div class="layout">
+<div class="scene">
+<div class="bar"><strong>โมเดล 3D</strong><div class="views"><button id="orbit">มุมเฉียง</button><button id="rear">ดูสวิตช์ A</button><button id="side">ดูสวิตช์ B</button><button id="airView">ชุดลม</button><button id="zoomIn" aria-label="ซูมเข้า">＋</button><button id="zoomOut" aria-label="ซูมออก">−</button></div></div>
+<canvas id="scene" aria-label="โมเดลเครื่องหนีบและปั๊มเจาะสามมิติ"></canvas>
+<div class="legend"><span><b style="color:#78bbff">A</b> กระบอกหนีบ</span><span><b style="color:#ffb15d">B</b> กระบอกปั๊ม</span><span><b style="color:#a7ec89">สีเขียว</b> แผ่น Blank</span><span>ลากเพื่อหมุน · เลื่อนล้อเพื่อซูม</span><span><b style="color:#36ba9f">สีเขียวอมฟ้า</b> สายจ่ายลม</span><span>FR ชุดกรองและปรับแรงดัน · V-A/V-B วาล์วกระบอก · V-G วาล์วเลือกกลุ่ม</span></div>
+</div>
+<aside>
+<section class="panel"><h2>ควบคุมรอบการทำงาน</h2>
+<label for="mode">โหมด</label><select id="mode"><option value="auto">AUTO · ครบหนึ่งรอบ</option><option value="step">STEP · ทีละจังหวะ</option><option value="external">FluidSIM · แสดงผลผ่าน Bridge</option></select>
+<div class="controls"><button id="load">วางแผ่น Blank</button><button id="unload">นำชิ้นงานออก</button><button id="start" class="primary wide">START</button><button id="sound" aria-label="เสียงการทำงาน" aria-pressed="false">เสียง: <span id="soundState">ปิด</span></button><button id="reset">รีเซ็ตการจำลอง</button></div>
+<p class="status" id="status" role="status"></p>
+<div class="sequence" id="sequence"></div></section>
+<section class="panel"><h2>ลิมิตสวิตช์ไฟฟ้า</h2><div class="signal" id="signals"></div><p class="sub">สีเขียวแสดงสวิตช์ที่ถูกกด · a1 ตรวจตำแหน่งหนีบ · b0 ยืนยันหัวปั๊มอยู่ด้านบน</p></section>
+<details class="panel" id="bridge"><summary>เชื่อม FluidSIM ผ่าน WebSocket</summary>
+<p>โหมดแสดงผลรับตำแหน่งจากโปรแกรม Bridge บนเครื่องเดียวกัน</p>
+<label class="endpoint" for="endpoint">WebSocket ของ Bridge<input id="endpoint" value="ws://127.0.0.1:8765" spellcheck="false"></label>
+<button id="connect">เชื่อมต่อ</button><p id="connection" role="status">ยังไม่ได้เชื่อมต่อ</p>
+<p>ตัวอย่าง JSON ที่ Bridge ส่งมายังหน้าเว็บ</p><p class="mono">{"a":0,"b":0,"part":"blank"}</p>
+<p><code>a</code> = 0 ถอย / 1 หนีบ, <code>b</code> = 0 บน / 1 ล่าง และส่งค่าระหว่าง 0–1 ได้ · <code>part</code> = empty, blank หรือ punched (ละได้)</p>
+</details>
+<section class="panel"><h2>ตรวจชิ้นงานจากด้านบน</h2><canvas id="inspection" width="300" height="104" aria-label="ภาพชิ้นงานจากด้านบน"></canvas><p class="sub" id="inspectionStatus"></p></section></aside></div>
+<footer>แบบจำลองเพื่อการสอน · ตำแหน่งสวิตช์แสดงตามการเคลื่อนที่ของลูกเบี้ยวในโมเดล</footer>
+</main>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+let audioContext, audioOutput, airBuffer;
+let soundEnabled=false, soundRequested=false;
+const soundVoices=new Set();
+const soundButton=byId("sound");
+
+function stopSounds(){
+  for(const source of soundVoices) source.stop();
+  soundVoices.clear();
+}
+function showSoundSetting(){
+  soundButton.setAttribute("aria-pressed",String(soundEnabled));
+  byId("soundState").textContent=soundEnabled?"เปิด":"ปิด";
+}
+soundButton.onclick=async ()=>{
+  soundRequested=!soundRequested;
+  if(!soundRequested){
+    soundEnabled=false;
+    stopSounds();
+    showSoundSetting();
+    return;
+  }
+  try{
+    if(!audioContext){
+      const AudioEngine=window.AudioContext || window.webkitAudioContext;
+      audioContext=new AudioEngine();
+      audioOutput=audioContext.createGain();
+      audioOutput.gain.value=.72;
+      audioOutput.connect(audioContext.destination);
+      airBuffer=audioContext.createBuffer(1,audioContext.sampleRate,audioContext.sampleRate);
+      const samples=airBuffer.getChannelData(0);
+      for(let i=0;i<samples.length;i++) samples[i]=Math.random()*2-1;
+    }
+    await audioContext.resume();
+    soundEnabled=soundRequested && audioContext.state==="running";
+    soundRequested=soundEnabled;
+    showSoundSetting();
+  }catch{
+    soundRequested=false;
+    byId("soundState").textContent="ใช้งานไม่ได้";
+  }
+};
+
+function playSound(kind){
+  if(!soundEnabled || audioContext.state!=="running") return;
+  const now=audioContext.currentTime;
+  const hit=kind==="punch" || kind==="clamp";
+  const duration=hit?.13:kind==="b"?.34:.26;
+  const source=hit?audioContext.createOscillator():audioContext.createBufferSource();
+  const filter=audioContext.createBiquadFilter();
+  filter.type=hit?"lowpass":"bandpass";
+  filter.frequency.value=hit?1600:kind==="b"?850:1320;
+  if(hit){
+    source.type=kind==="punch"?"triangle":"sine";
+    source.frequency.setValueAtTime(kind==="punch"?160:245,now);
+    source.frequency.exponentialRampToValueAtTime(kind==="punch"?56:115,now+duration);
+  }else source.buffer=airBuffer;
+  const envelope=audioContext.createGain();
+  envelope.gain.setValueAtTime(.001,now);
+  envelope.gain.linearRampToValueAtTime(kind==="punch"?.22:kind==="clamp"?.115:.24,now+(hit?.004:.027));
+  envelope.gain.exponentialRampToValueAtTime(.001,now+duration);
+  source.connect(filter).connect(envelope).connect(audioOutput);
+  soundVoices.add(source);
+  source.onended=()=>{soundVoices.delete(source);source.disconnect();filter.disconnect();envelope.disconnect();};
+  source.start(now);
+  source.stop(now+duration);
+}
+
+
+const canvas = byId("scene");
+const ctx = canvas.getContext("2d");
+const layer = document.createElement("canvas");
+const raster = layer.getContext("2d");
+const inspection = byId("inspection").getContext("2d");
+let pixels, depthBuffer;
+let lastFrame = "", lastPart = "";
+const state = {a:0,b:0,part:"empty",feed:0,step:0,motion:null,feedMotion:null,note:"วางแผ่น Blank บนแม่พิมพ์ล่าง",socket:null};
+const stages = [
+  {key:"a",to:1,label:"A+",text:"A ยืดเพื่อหนีบแผ่น Blank",limit:"a1"},
+  {key:"b",to:1,label:"B+",text:"B ลงปั๊มเจาะ โดย A หนีบค้าง",limit:"b1"},
+  {key:"b",to:0,label:"B−",text:"B ยกหัวปั๊มขึ้น",limit:"b0"},
+  {key:"a",to:0,label:"A−",text:"A ถอยเพื่อคลายหนีบ",limit:"a0"}
+];
+const limits = {a0:"A ถอย",a1:"A หนีบ",b0:"B บน",b1:"B ล่าง"};
+const view = {yaw:.38,pitch:.28,zoom:1};
+const strokeA = 1.03;
+const strokeB = 1.43;
+const punchRadius = .21;
+const dieTop = 1.09;
+const blankThickness = .065;
+const blankHalfWidth = 1.11;
+const jawWidth = .17;
+const jawClearance = .016;
+const clampAxisY = 1.22;
+const at = () => ({a0:state.a<=.012,a1:state.a>=.988,b0:state.b<=.012,b1:state.b>=.988});
+const external = () => byId("mode").value==="external";
+const home = () => at().a0 && at().b0;
+
+function refresh(){
+  const moving = Boolean(state.motion || state.feedMotion);
+  const local = !external();
+  const started = state.step>0 && state.step<stages.length;
+  byId("load").disabled = !local || moving || !home() || state.part!=="empty";
+  byId("unload").disabled = !local || moving || !home() || state.part==="empty" || started;
+  byId("start").disabled = !local || moving || state.step>=stages.length || (!started && (state.part!=="blank" || !home()));
+  byId("reset").disabled = !local;
+  byId("mode").disabled = moving;
+  byId("start").textContent = byId("mode").value==="step" ? (started?"เดินจังหวะ "+stages[state.step].label:"เริ่มจังหวะ A+") : "START · 1 รอบ";
+  byId("status").textContent = state.note;
+  const switches = at();
+  byId("signals").innerHTML = Object.entries(limits).map(([key,label])=>'<div class="'+(switches[key]?"on":"")+'">'+key+'<small>'+label+'</small></div>').join("");
+  byId("sequence").innerHTML = stages.map((stage,index)=>'<div class="'+(state.motion && index===state.step?"active":index<state.step?"done":"")+'">'+stage.label+'</div>').join("");
+}
+
+function startStage(){
+  if(state.motion || state.step>=stages.length) return;
+  const stage = stages[state.step];
+  const switches = at();
+  const permits = [home() && state.part==="blank",switches.a1,switches.b1,switches.b0 && switches.a1];
+  if(!permits[state.step]){
+    state.note="รอสัญญาณยืนยันตำแหน่งก่อนเดินจังหวะ "+stage.label;
+    refresh();
+    return;
+  }
+  state.motion={stage,from:state[stage.key],time:performance.now(),duration:state.step===1?1150:870};
+  playSound(stage.key);
+  state.note=stage.text;
+  refresh();
+}
+function advance(now){
+  if(state.feedMotion){
+    const f=state.feedMotion;
+    const t=Math.min(1,(now-f.time)/650);
+    state.feed=f.from+(f.to-f.from)*t;
+    if(t===1){
+      state.feedMotion=null;
+      if(f.to===0) state.part="empty";
+      state.note=f.to===1?"แผ่น Blank อยู่บนแม่พิมพ์ · พร้อมเริ่ม":"นำชิ้นงานออกแล้ว · วางแผ่นใหม่ได้";
+      refresh();
+    }
+  }
+  if(!state.motion) return;
+  const m=state.motion;
+  const t=Math.min(1,(now-m.time)/m.duration);
+  const easing=t*t*(3-2*t);
+  state[m.stage.key]=m.from+(m.stage.to-m.from)*easing;
+  if(t<1) return;
+  state.motion=null;
+  if(!at()[m.stage.limit]){
+    state.note="รอสัญญาณ "+m.stage.limit;
+    refresh();
+    return;
+  }
+  if(m.stage.limit==="b1"){
+    state.part="punched";
+    playSound("punch");
+  }
+  if(m.stage.limit==="a1") playSound("clamp");
+  state.step++;
+  if(state.step===stages.length){
+    state.note="จบรอบ · a0 และ b0 ทำงาน · นำชิ้นงานออกได้";
+  }else if(byId("mode").value==="auto"){
+    startStage();
+    return;
+  }else{
+    state.note=m.stage.limit+" ทำงาน · พร้อมเดินจังหวะ "+stages[state.step].label;
+  }
+  refresh();
+}
+function feed(to){
+  if(to===1) state.part="blank";
+  state.step=0;
+  state.feedMotion={from:state.feed,to,time:performance.now()};
+  state.note=to===1?"กำลังวางแผ่น Blank":"กำลังนำชิ้นงานออก";
+  refresh();
+}
+function reset(){
+  stopSounds();
+  Object.assign(state,{a:0,b:0,part:"empty",feed:0,step:0,motion:null,feedMotion:null,note:"วางแผ่น Blank บนแม่พิมพ์ล่าง"});
+  refresh();
+}
+byId("load").onclick=()=>feed(1);
+byId("unload").onclick=()=>feed(0);
+byId("start").onclick=startStage;
+byId("reset").onclick=reset;
+let previousMode="auto";
+byId("mode").onchange=()=>{
+  if(external()){
+    reset();
+    byId("bridge").open=true;
+    state.note="รอข้อมูลตำแหน่งจาก Bridge";
+  }else if(previousMode==="external"){
+    disconnect();
+    reset();
+  }
+  previousMode=byId("mode").value;
+  refresh();
+};
+function disconnect(){
+  const socket=state.socket;
+  state.socket=null;
+  if(socket) socket.close();
+  byId("connect").textContent="เชื่อมต่อ";
+  byId("connection").textContent="ยังไม่ได้เชื่อมต่อ";
+}
+byId("connect").onclick=()=>{
+  if(state.socket){disconnect();state.note="ตัดการเชื่อมต่อ · ค้างตำแหน่งล่าสุด";refresh();return;}
+  if(!external()){byId("connection").textContent="เลือกโหมด FluidSIM ก่อนเชื่อมต่อ";return;}
+  let socket;
+  try{
+    const url=new URL(byId("endpoint").value);
+    if(!["ws:","wss:"].includes(url.protocol)) throw new Error();
+    socket=new WebSocket(url);
+  }catch{
+    byId("connection").textContent="กรอก URL แบบ ws:// หรือ wss://";
+    return;
+  }
+  state.socket=socket;
+  byId("connect").textContent="ตัดการเชื่อมต่อ";
+  byId("connection").textContent="กำลังเชื่อมต่อ";
+  socket.onopen=()=>{
+    if(state.socket!==socket) return;
+    byId("connection").textContent="เชื่อมต่อแล้ว · รอข้อมูล";
+  };
+  socket.onmessage=event=>{
+    if(state.socket!==socket || !external()) return;
+    let data;
+    try{data=JSON.parse(event.data);}catch{data=null;}
+    const valid=value=>Number.isFinite(value) && value>=0 && value<=1;
+    if(!data || !valid(data.a) || !valid(data.b) || (data.part!==undefined && !["empty","blank","punched"].includes(data.part))){
+      byId("connection").textContent="รูปแบบข้อมูลไม่ถูกต้อง";
+      return;
+    }
+    const switches=at();
+    if((switches.a0 && data.a>.012) || (switches.a1 && data.a<.988)) playSound("a");
+    if((switches.b0 && data.b>.012) || (switches.b1 && data.b<.988)) playSound("b");
+    if(data.part==="punched" && state.part==="blank") playSound("punch");
+    state.a=data.a;
+    state.b=data.b;
+    state.feed=1;
+    if(data.part!==undefined) state.part=data.part;
+    state.note="แสดงตำแหน่งจาก Bridge";
+    byId("connection").textContent="กำลังรับข้อมูล";
+    refresh();
+  };
+  socket.onerror=()=>{
+    if(state.socket===socket) byId("connection").textContent="ติดต่อ Bridge ไม่สำเร็จ";
+  };
+  socket.onclose=()=>{
+    if(state.socket!==socket) return;
+    disconnect();
+    byId("connection").textContent="การเชื่อมต่อปิด · ตรวจว่า Bridge ทำงานอยู่";
+    state.note="ค้างตำแหน่งล่าสุด";
+    refresh();
+  };
+};
+
+const faces=[];
+const tags=[];
+function face(points,color){faces.push({points,color});}
+function plate(x,y,z,w,h,d,r,color){
+  const angles=Array.from({length:40},(_,i)=>i*Math.PI/20);
+  const corner=Math.atan2(d,w);
+  angles.push(corner,Math.PI-corner,Math.PI+corner,2*Math.PI-corner);
+  angles.sort((a,b)=>a-b);
+  const rings=angles.map(angle=>{
+    const c=Math.cos(angle),s=Math.sin(angle);
+    const edge=Math.min(w/2/Math.abs(c),d/2/Math.abs(s));
+    return [[x+c*edge,z+s*edge],[x+c*r,z+s*r]];
+  });
+  const point=(xz,height)=>[xz[0],height,xz[1]];
+  for(let i=0;i<rings.length;i++){
+    const [o,a]=rings[i], [n,b]=rings[(i+1)%rings.length];
+    const ot=point(o,y+h), at=point(a,y+h), nt=point(n,y+h), bt=point(b,y+h);
+    const ob=point(o,y), ab=point(a,y), nb=point(n,y), bb=point(b,y);
+    face([ot,at,bt,nt],color);
+    face([ob,nb,bb,ab],color);
+    face([ot,nt,nb,ob],color);
+    face([at,ab,bb,bt],color);
+  }
+}
+function box(x,y,z,w,h,d,color){
+  const p=[[x,y,z],[x+w,y,z],[x+w,y+h,z],[x,y+h,z],[x,y,z+d],[x+w,y,z+d],[x+w,y+h,z+d],[x,y+h,z+d]];
+  for(const indices of [[0,3,2,1],[4,5,6,7],[0,1,5,4],[3,7,6,2],[0,4,7,3],[1,2,6,5]]) face(indices.map(i=>p[i]),color);
+}
+function tube(axis,x,y,z,length,radius,color){
+  const ring=(end)=>Array.from({length:20},(_,i)=>{
+    const angle=i*Math.PI/10;
+    const c=radius*Math.cos(angle),s=radius*Math.sin(angle);
+    return axis==="x"?[x+end,y+c,z+s]:[x+c,y+end,z-s];
+  });
+  const near=ring(0),far=ring(length);
+  face([...near].reverse(),color);
+  face(far,color);
+  for(let i=0;i<20;i++){
+    const j=(i+1)%20;
+    face([near[i],near[j],far[j],far[i]],color);
+  }
+}
+const steel="#667785",light="#a7b5bf",dark="#35434e",chrome="#c7d4dc",blue="#408bdd",orange="#e78b3f",green="#7dbd62";
+function switchA(x,label,on){
+  box(x-.19,.68,-1.05,.38,.13,.3,light);
+  box(x-.15,.81,-1.02,.3,.32,.24,dark);
+  box(x-.035,.94,-.80,.07,.17,.14,chrome);
+  tube("x",x-.07,on?1.095:1.14,-.65,.14,.063,on?"#80f3a0":"#e5bd7f");
+  tags.push({label,p:[x,.74,-1.07],on});
+}
+function switchB(y,label,on){
+  box(1.14,y-.15,-.39,.21,.3,.36,light);
+  box(.94,y-.13,-.33,.22,.26,.24,dark);
+  box(.79,y-.032,-.26,.17,.064,.105,chrome);
+  tube("y",on?.815:.76,y-.058,-.20,.116,.061,on?"#80f3a0":"#e5bd7f");
+  tags.push({label,p:[1.28,y,.00],on});
+}
+const supplyLine="#36ba9f", lineA="#589fff", lineB="#ffad62";
+const floorY=-2.32;
+
+function ringSurface(rings,color){
+  for(let k=1;k<rings.length;k++){
+    const near=rings[k-1],far=rings[k];
+    for(let i=0;i<near.length;i++){
+      const j=(i+1)%near.length;
+      face([near[i],near[j],far[j],far[i]],color);
+    }
+  }
+}
+
+function hose(points,color,r=.045){
+  const rounded=[points[0]];
+  for(let i=1;i<points.length-1;i++){
+    const p=points[i],prev=points[i-1],next=points[i+1];
+    const toward=q=>{
+      const length=Math.hypot(...q.map((v,k)=>v-p[k]));
+      const fraction=Math.min(.32,.22/length);
+      return p.map((v,k)=>v+(q[k]-v)*fraction);
+    };
+    const start=toward(prev),end=toward(next);
+    for(let j=0;j<=4;j++){
+      const t=j/4,u=1-t;
+      rounded.push(p.map((v,k)=>u*u*start[k]+2*u*t*v+t*t*end[k]));
+    }
+  }
+  rounded.push(points.at(-1));
+  const rings=rounded.map((p,i)=>{
+    const prev=rounded[Math.max(0,i-1)],next=rounded[Math.min(rounded.length-1,i+1)];
+    const [x,y,z]=next.map((v,k)=>v-prev[k]);
+    const normal=[.83*y-.29*z,.41*z-.83*x,.29*x-.41*y];
+    const length=Math.hypot(...normal);
+    const [a,b,c]=normal.map(v=>v/length);
+    const cross=[y*c-z*b,z*a-x*c,x*b-y*a];
+    const unit=cross.map(v=>v/Math.hypot(x,y,z));
+    return Array.from({length:10},(_,j)=>{
+      const angle=j*Math.PI/5;
+      return p.map((v,k)=>v+r*normal[k]/length*Math.cos(angle)+r*unit[k]*Math.sin(angle));
+    });
+  });
+  ringSurface(rings,color);
+  face([...rings[0]].reverse(),color);
+  face(rings.at(-1),color);
+}
+
+function tank(){
+  const centerY=-1.42,centerZ=.47,r=.64;
+  const profile=[];
+  for(let i=0;i<=8;i++){
+    const angle=i*Math.PI/16;
+    profile.push([-3.12-.42*Math.cos(angle),Math.max(.001,r*Math.sin(angle))]);
+  }
+  for(let i=8;i>=0;i--){
+    const angle=i*Math.PI/16;
+    profile.push([-.94+.42*Math.cos(angle),Math.max(.001,r*Math.sin(angle))]);
+  }
+  ringSurface(profile.map(([x,radius])=>Array.from({length:32},(_,i)=>{
+    const angle=i*Math.PI/16;
+    return [x,centerY+radius*Math.cos(angle),centerZ+radius*Math.sin(angle)];
+  })),"#397580");
+  for(const x of [-2.95,-1.18]){
+    box(x-.16,floorY,.01,.32,.44,.92,dark);
+    tube("x",x-.035,centerY,centerZ,.07,.65,"#4d8790");
+  }
+  tube("y",-1.03,-.81,.47,.19,.07,chrome);
+  box(-1.16,-.65,.35,.26,.085,.24,"#b88548");
+  tags.push({label:"TANK",p:[-2.22,-1.40,1.12],on:false});
+}
+
+function valve(x,label,accent){
+  box(x-.48,-1.55,.64,.96,.55,.17,dark);
+  box(x-.40,-1.41,.81,.80,.33,.31,light);
+  for(const side of [-1,1]){
+    box(x+side*.47-.08,-1.36,.84,.16,.23,.22,"#465665");
+    tube("y",x+side*.19,-1.09,.99,.12,.053,chrome);
+  }
+  tube("y",x,-1.54,.99,.14,.058,"#b88548");
+  for(const offset of [-.25,.25]) tube("y",x+offset,-1.50,.91,.10,.056,"#9b7c55");
+  box(x-.22,-1.34,1.12,.44,.18,.022,accent);
+  tags.push({label,p:[x,-1.35,1.155],on:false});
+}
+
+function airSystem(){
+  for(const x of [-4.02,2.78]) for(const z of [-1.36,1.05]){
+    box(x,floorY+.09,z,.31,2.23,.31,steel);
+    box(x-.07,floorY,z-.07,.45,.09,.45,dark);
+  }
+  box(-3.72,-2.17,-1.34,6.51,.18,.20,steel);
+  box(-.05,-1.63,.49,3.19,.72,.19,steel);
+  tank();
+  const x=-.15;
+  box(x-.18,-.91,.71,.36,.34,.29,light);
+  tube("y",x,-1.15,.85,.25,.112,"#7295a4");
+  tube("y",x,-.57,.85,.15,.104,dark);
+  hose([[x,-.77,.99],[x,-.77,1.14]],chrome,.131);
+  hose([[x,-.77,1.139],[x,-.77,1.154]],"#e3eaf0",.101);
+  hose([[x,-.77,1.155],[x+.048,-.718,1.155]],dark,.011);
+  tags.push({label:"FR",p:[x,-.45,1.17],on:false});
+
+  valve(.57,"V-A",lineA);
+  valve(1.62,"V-B",lineB);
+  valve(2.67,"V-G",supplyLine);
+  hose([[-1.03,-.58,.47],[-.80,-.58,.47],[-.49,-.69,.85],[-.31,-.69,.85]],supplyLine);
+  hose([[.02,-.69,.85],[.20,-.69,.85],[.20,-1.73,1.03],[2.67,-1.73,1.03],[2.67,-1.54,.99]],supplyLine);
+  for(const x of [.57,1.62]) hose([[x,-1.73,1.03],[x,-1.54,.99]],supplyLine);
+
+  for(const [index,cylinderX] of [-3.92,-2.82].entries()){
+    const start=.38+index*.38;
+    const routeZ=-1.77-index*.15;
+    tube("y",cylinderX,clampAxisY+.28,-.12,.14,.067,chrome);
+    hose([[start,-.97,.99],[start,-.57,.97],[start,-.48,routeZ],
+      [cylinderX,-.48,routeZ],[cylinderX,clampAxisY+.66,routeZ],
+      [cylinderX,clampAxisY+.66,-.12],[cylinderX,clampAxisY+.42,-.12]],lineA);
+  }
+  for(const [index,cylinderY] of [3.79,4.82].entries()){
+    const start=1.43+index*.38;
+    const riser=1.59+index*.19;
+    hose([[.43,cylinderY,-.13],[.57,cylinderY,-.13]],chrome,.066);
+    hose([[start,-.97,.99],[start,-.68,.98],[riser,-.54,-.63],
+      [riser,cylinderY,-.63],[riser,cylinderY,-.13],[.57,cylinderY,-.13]],lineB);
+  }
+}
+
+function machine(){
+  faces.length=0;
+  tags.length=0;
+  const a=state.a*strokeA,b=state.b*strokeB,s=at();
+  const jawX=-blankHalfWidth-jawWidth-strokeA+a;
+  const jawY=dieTop+jawClearance;
+  airSystem();
+  box(-4.25,0,-1.65,7.6,.29,3.3,dark);
+  box(-4.16,.29,-1.56,7.42,.10,3.12,steel);
+  for(const x of [-2.26,2.57]){
+    box(x-.17,.39,-1.45,.8,.13,.77,light);
+    box(x,.52,-1.27,.46,4.87,.45,steel);
+  }
+  box(-2.42,5.17,-1.38,5.68,.38,1.91,steel);
+  box(-1.49,.39,-.78,2.98,.22,1.56,dark);
+  plate(0,.61,0,2.76,.31,1.34,.255,steel);
+  plate(0,.92,0,2.64,.17,1.18,.255,light);
+  box(blankHalfWidth,dieTop,-.46,.18,.27,.92,steel);
+  box(-4.06,.39,-.55,.54,.64,1.1,steel);
+  tube("x",-3.91,clampAxisY,0,1.12,.32,blue);
+  box(-4.0,clampAxisY-.34,-.34,.17,.68,.68,blue);
+  box(-2.90,clampAxisY-.34,-.34,.17,.68,.68,blue);
+  for(const y of [clampAxisY-.27,clampAxisY+.27]) for(const z of [-.27,.27]) tube("x",-3.88,y,z,1.09,.036,chrome);
+  const rodStart=-2.73;
+  tube("x",rodStart,clampAxisY,0,jawX-rodStart,.095,chrome);
+  box(jawX,jawY,-.42,jawWidth,.32,.84,steel);
+  box(jawX,1.13,-.65,jawWidth,.08,.24,orange);
+  box(-2.49,.39,-1.10,1.58,.29,.31,steel);
+  switchA(-2.225,"a0",s.a0);
+  switchA(-1.195,"a1",s.a1);
+  box(-.54,4.99,-.50,1.08,.18,1.00,light);
+  tube("y",0,3.66,0,1.33,.43,orange);
+  box(-.47,3.62,-.47,.94,.14,.94,orange);
+  box(-.47,4.90,-.47,.94,.13,.94,orange);
+  for(const x of [-.36,.36]) for(const z of [-.36,.36]) tube("y",x,3.72,z,1.20,.035,chrome);
+  box(-.90,.60,-.77,1.98,4.57,.19,dark);
+  box(-.78,1.52,-.38,.18,2.09,.18,steel);
+  box(.60,1.52,-.38,.18,2.09,.18,steel);
+  box(.78,1.55,-.50,.53,1.83,.19,steel);
+  tube("y",0,3.01-b,0,.62+b,.135,chrome);
+  box(-.67,2.86-b,-.43,1.34,.20,.84,steel);
+  box(.66,2.90-b,-.26,.18,.10,.13,orange);
+  tube("y",0,2.48-b,0,.38,punchRadius,chrome);
+  switchB(2.95,"b0",s.b0);
+  switchB(2.95-strokeB,"b1",s.b1);
+  if(state.part!=="empty"){
+    const z=1.65*(1-state.feed)-.42;
+    if(state.part==="blank") box(-blankHalfWidth,dieTop,z,2*blankHalfWidth,blankThickness,.84,green);
+    else plate(0,dieTop,z+.42,2*blankHalfWidth,blankThickness,.84,punchRadius,green);
+  }
+  tags.push({label:"A",p:[-3.39,1.53,.06],on:false},{label:"B",p:[0,4.30,.50],on:false});
+}
+
+function drawInspection(){
+  const part=state.part;
+  if(part===lastPart) return;
+  lastPart=part;
+  inspection.clearRect(0,0,300,104);
+  const label=byId("inspectionStatus");
+  if(part==="empty"){
+    label.textContent="รอแผ่น Blank";
+    return;
+  }
+  inspection.fillStyle="#88c871";
+  inspection.beginPath();
+  inspection.rect(42,12,216,80);
+  if(part==="punched"){
+    inspection.moveTo(170.5,52);
+    inspection.arc(150,52,20.5,0,Math.PI*2);
+  }
+  inspection.fill("evenodd");
+  label.textContent=part==="punched"?"แผ่นปั๊มเจาะแล้ว · รูทะลุตรงกลาง":"แผ่น Blank ก่อนปั๊มเจาะ";
+}
+
+function drawTriangle(a,b,c,[red,green,blue]){
+  const w=layer.width,h=layer.height;
+  const area=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  if(Math.abs(area)<1e-6) return;
+  const x0=Math.max(0,Math.floor(Math.min(a[0],b[0],c[0])));
+  const x1=Math.min(w-1,Math.ceil(Math.max(a[0],b[0],c[0])));
+  const y0=Math.max(0,Math.floor(Math.min(a[1],b[1],c[1])));
+  const y1=Math.min(h-1,Math.ceil(Math.max(a[1],b[1],c[1])));
+  const dxU=(b[1]-c[1])/area,dxV=(c[1]-a[1])/area;
+  for(let y=y0;y<=y1;y++){
+    let u=((c[0]-b[0])*(y+.5-b[1])-(c[1]-b[1])*(x0+.5-b[0]))/area;
+    let v=((a[0]-c[0])*(y+.5-c[1])-(a[1]-c[1])*(x0+.5-c[0]))/area;
+    for(let x=x0;x<=x1;x++,u+=dxU,v+=dxV){
+      const t=1-u-v;
+      if(u < -1e-7 || v < -1e-7 || t < -1e-7) continue;
+      const z=u*a[2]+v*b[2]+t*c[2];
+      const i=y*w+x;
+      if(z<=depthBuffer[i]) continue;
+      depthBuffer[i]=z;
+      const j=i*4;
+      pixels.data[j]=red;
+      pixels.data[j+1]=green;
+      pixels.data[j+2]=blue;
+      pixels.data[j+3]=255;
+    }
+  }
+}
+function frame(now){
+  advance(now);
+  const w=canvas.clientWidth,h=canvas.clientHeight,dpr=Math.min(window.devicePixelRatio||1,2);
+  requestAnimationFrame(frame);
+  drawInspection();
+  if(w<1 || h<1) return;
+  const moving=Boolean(state.motion || state.feedMotion || pointer);
+  const key=[w,h,dpr,moving,view.yaw,view.pitch,view.zoom,view.targetY,state.a,state.b,state.part,state.feed].join("|");
+  if(key===lastFrame) return;
+  lastFrame=key;
+  if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){
+    canvas.width=Math.round(w*dpr);
+    canvas.height=Math.round(h*dpr);
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  const cy=Math.cos(view.yaw),sy=Math.sin(view.yaw);
+  const cp=Math.cos(view.pitch),sp=Math.sin(view.pitch);
+  const scale=Math.min(w/9.2,h/9.1)*view.zoom;
+  function project([x,y,z]){
+    x+=.35;
+    y-=view.targetY??1.65;
+    const u=cy*x-sy*z, q=sy*x+cy*z;
+    return [w/2+u*scale,h*.53-(cp*y-sp*q)*scale,sp*y+cp*q];
+  }
+  ctx.lineWidth=1;
+  ctx.strokeStyle="#8394a22a";
+  for(let i=-8;i<=8;i++){
+    for(const [a,b] of [[[i,floorY-.025,-5],[i,floorY-.025,5]],[[-8,floorY-.025,i],[8,floorY-.025,i]]]){
+      const p=project(a),q=project(b);
+      ctx.beginPath();ctx.moveTo(...p.slice(0,2));ctx.lineTo(...q.slice(0,2));ctx.stroke();
+    }
+  }
+  machine();
+  // Sample more finely when still, then downsample to smooth silhouette edges.
+  const pixelScale=moving ? Math.min(1.45*dpr,1500/w,1050/h) : Math.min(2.25*dpr,2400/w,1600/h);
+  const rw=Math.max(1,Math.round(w*pixelScale)),rh=Math.max(1,Math.round(h*pixelScale));
+  if(!pixels || layer.width!==rw || layer.height!==rh){
+    layer.width=rw;
+    layer.height=rh;
+    pixels=raster.createImageData(rw,rh);
+    depthBuffer=new Float32Array(rw*rh);
+  }
+  depthBuffer.fill(-Infinity);
+  pixels.data.fill(0);
+  for(const item of faces){
+    const projected=item.points.map(p=>{
+      const [x,y,z]=project(p);
+      return [x*rw/w,y*rh/h,z];
+    });
+    const [a,b,c]=projected;
+    if((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])>=0) continue;
+    const [p,q,r]=item.points;
+    const u=q.map((n,i)=>n-p[i]),v=r.map((n,i)=>n-p[i]);
+    const normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+    const shade=.61+.41*Math.max(0,(-.38*normal[0]+.80*normal[1]+.46*normal[2])/Math.hypot(...normal));
+    const rgb=[1,3,5].map(i=>Math.round(parseInt(item.color.slice(i,i+2),16)*shade));
+    for(let i=1;i<projected.length-1;i++) drawTriangle(a,projected[i],projected[i+1],rgb);
+  }
+  raster.putImageData(pixels,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality="high";
+  ctx.drawImage(layer,0,0,w,h);
+  for(const tag of tags){
+    const [x,y]=project(tag.p);
+    const offset=tag.label==="a0"||tag.label==="a1"?23:tag.label.startsWith("b")&&tag.label.length>1?33:0;
+    const tx=x+offset,ty=y-(tag.label.length>1?12:0);
+    ctx.strokeStyle=tag.on?"#90e6af":"#a5b7c9";
+    ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(tx,ty);ctx.stroke();
+    ctx.fillStyle=tag.on?"#b4f5c8":"#1c2936";
+    const width=Math.max(22,tag.label.length*7+12);
+    ctx.fillRect(tx-width/2,ty-9,width,18);
+    ctx.fillStyle=tag.on?"#133423":"#f5f9ff";
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="bold 12px Consolas,monospace";
+    ctx.fillText(tag.label,tx,ty);
+  }
+}
+let pointer=null;
+canvas.onpointerdown=event=>{
+  if(pointer) return;
+  pointer={id:event.pointerId,x:event.clientX,y:event.clientY};
+  canvas.setPointerCapture(event.pointerId);
+};
+canvas.onpointermove=event=>{
+  if(!pointer || pointer.id!==event.pointerId) return;
+  view.yaw+=(event.clientX-pointer.x)*.012;
+  view.pitch=Math.max(-.15,Math.min(1.15,view.pitch+(event.clientY-pointer.y)*.009));
+  Object.assign(pointer,{x:event.clientX,y:event.clientY});
+};
+canvas.onlostpointercapture=event=>{if(pointer?.id===event.pointerId) pointer=null;};
+function zoom(factor){view.zoom=Math.min(2.5,Math.max(.58,view.zoom*factor));}
+canvas.addEventListener("wheel",event=>{event.preventDefault();zoom(event.deltaY<0?1.11:1/1.11);},{passive:false});
+byId("airView").onclick=()=>Object.assign(view,{yaw:.22,pitch:.21,zoom:1.12,targetY:-.32});
+byId("orbit").onclick=()=>Object.assign(view,{yaw:.38,pitch:.28,zoom:1,targetY:1.65});
+byId("rear").onclick=()=>Object.assign(view,{yaw:2.78,pitch:.42,zoom:1,targetY:1.65});
+byId("side").onclick=()=>Object.assign(view,{yaw:.68,pitch:.20,zoom:1.16,targetY:1.65});
+byId("zoomIn").onclick=()=>zoom(1.15);
+byId("zoomOut").onclick=()=>zoom(1/1.15);
+refresh();
+requestAnimationFrame(frame);
+</script></body></html>
