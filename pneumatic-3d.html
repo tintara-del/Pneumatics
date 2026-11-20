@@ -1,0 +1,2499 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แผงฝึกนิวแมติกส์ 3D</title>
+<style>
+:root{color-scheme:dark;--ink:#eef4f5;--muted:#a9bcc6;--line:#2b404d;--cyan:#63e2da}
+*{box-sizing:border-box}
+body{margin:0;background:#101c26;color:var(--ink);font:16px/1.6 system-ui,"Leelawadee UI",sans-serif}
+main{max-width:1380px;margin:auto;padding:clamp(18px,4vw,56px)}
+h1,h2,p{margin:0}h1{font-size:clamp(28px,4.5vw,54px);line-height:1.18;letter-spacing:-.03em}
+header p{color:var(--muted);margin:10px 0 24px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);gap:18px;align-items:start}
+.viewer,aside{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#162633}
+.viewport{position:relative;display:grid;place-items:center;min-height:290px;aspect-ratio:1.5;overflow:hidden;perspective:1050px;touch-action:pan-y;cursor:grab;background:radial-gradient(ellipse at center,#304653 0,transparent 76%),repeating-linear-gradient(90deg,transparent 0 25px,#90b4c00b 25px 26px),repeating-linear-gradient(0deg,#152530 0 25px,#90b4c018 25px 26px)}
+.viewport.dragging{cursor:grabbing;touch-action:none}
+.board{position:relative;width:88%;aspect-ratio:1.55;transform-style:preserve-3d;transform:rotateX(var(--x,34deg)) rotateZ(var(--z,-9deg));background:linear-gradient(155deg,#d6dfe3,#a1b1b7 65%,#c4cdd0);border:clamp(4px,1vw,10px) solid #3e4a52;border-radius:15px;box-shadow:0 0 0 2px #939da2,inset 0 0 0 1px #e3e9eb;container-type:normal}
+.board::before{content:"";position:absolute;inset:-8px;border-radius:16px;background:#4e5b62;transform:translateZ(-13px);box-shadow:0 24px 43px #0009}
+.screw{position:absolute;width:1%;aspect-ratio:1;border-radius:50%;background:linear-gradient(130deg,#edf4f5 35%,#52606a 40% 55%,#aab6bc 60%);transform:translateZ(2px)}
+.part{appearance:none;position:absolute;left:var(--left);top:var(--top);width:var(--width);height:var(--height);padding:0;border-radius:4px;border:0;background:none;transform-style:preserve-3d;cursor:pointer;color:#101b22}
+.part:focus-visible{outline:2px solid #004e57;outline-offset:4px}
+.face,.base,.hardware,.caption{position:absolute;pointer-events:none}
+.base{inset:0;border-radius:4px;background:#424f57;box-shadow:0 4px 6px #14202b86}
+.face{inset:0;border-radius:4px;border:1px solid #667881;background:linear-gradient(135deg,#edf3f4,#a0afb5);transform:translateZ(var(--depth,9px));box-shadow:inset 0 1px 1px #fff}
+.part[aria-pressed=true] .face{outline:2px solid #007778;outline-offset:3px;filter:drop-shadow(0 0 5px #54fff2)}
+.caption{top:100%;left:50%;transform:translate3d(-50%,0,2px);font-weight:800;font-size:clamp(6px,1vw,11px);white-space:nowrap}
+.valve .face{background:linear-gradient(90deg,#26333d 0 20%,#d4dbd9 20% 80%,#26333d 80%)}
+.valve .face::after,.roller .face::after{content:"";position:absolute;inset:17% 28%;background:radial-gradient(circle at 50% 13%,#697880 0 8%,#e0e8ed 12%,transparent 16%),radial-gradient(circle at 50% 87%,#697880 0 8%,#e0e8ed 12%,transparent 16%)}
+.hardware{z-index:1;width:13%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#344450 28%,#c2d1d6 38% 64%,#798990 70%);transform:translate(-50%,-50%) translateZ(12px)}
+.manifold .hardware,.hand .hardware{width:47%;background:radial-gradient(circle,#142e40 24%,#168bdb 34% 61%,#8c9ba2 69%)}
+.gauge{--depth:18px}.gauge .base,.gauge .face,.timer .dial,.push .dial,.selector .dial{border-radius:50%}
+.gauge .face{border:3px solid #202b32;background:repeating-conic-gradient(from 220deg,#263943 0 2deg,#e8eff0 3deg 12deg);display:grid;place-items:center}
+.gauge .face::after{content:"";width:72%;height:72%;border-radius:50%;background:linear-gradient(54deg,transparent 47%,#263943 48% 53%,transparent 54%) center/70% 70% no-repeat,#e8eff0}
+.cylinder{--depth:13px}.cylinder .base{inset:0 15% 0 0;background:linear-gradient(90deg,#536068 0 13%,transparent 13% 84%,#536068 84%);box-shadow:none}
+.cylinder .face{inset:17% 16% 17% 0;border-radius:8px;background:linear-gradient(0deg,#415059,#8798a0 24%,#effaff 45%,#acbcc3 63%,#647781 90%);box-shadow:0 6px 7px #20374475}
+.cylinder .face::before{content:"";position:absolute;left:100%;width:14%;height:35%;top:32%;background:linear-gradient(#455560,#e0edf2,#546570)}
+.cylinder .face::after{content:"";position:absolute;left:112%;width:9%;height:105%;top:-3%;border-radius:4px;background:linear-gradient(#667984,#d0dce2,#879ba5)}
+.roller .face::before{content:"";position:absolute;left:12%;top:-24%;width:75%;height:29%;border-radius:10px;background:radial-gradient(circle at 89%,#d2d5d2 0 13%,#79745e 14% 19%,transparent 20%),linear-gradient(5deg,transparent 28%,#726c55 29% 53%,transparent 54%)}
+.dial{position:absolute;inset:13% 24%;border:2px solid #d0d9db;background:linear-gradient(135deg,#6d7c83,#1a252e 65%);box-shadow:0 3px 3px #18283188}
+.push .dial{background:linear-gradient(135deg,#ff8a79,#a21b1c 65%)}
+.selector .dial::after,.hand .dial::after,.timer .dial::after{content:"";position:absolute;inset:41% 6%;background:#a2b2ba;transform:rotate(-28deg);border-radius:2px}
+.timer{--depth:15px}.timer .dial{inset:10% 17%;border-width:3px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:12px;border-top:1px solid var(--line)}
+.toolbar span{margin-right:auto;color:var(--muted);font-size:13px}
+.control,.item{font:inherit;color:var(--ink);background:#213744;border:1px solid #405763;border-radius:8px;cursor:pointer}
+.control{padding:5px 10px;font-size:13px}.control:hover,.item:hover{border-color:var(--cyan)}
+aside{padding:18px}
+h2{font-size:20px}.meta{font-size:13px;color:var(--cyan);margin:3px 0 8px}.description{min-height:80px}
+.items{display:grid;gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);max-height:365px;overflow:auto}
+.item{width:100%;text-align:left;padding:5px 9px;font-size:13px;display:flex;justify-content:space-between;gap:8px}.item[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}
+footer{color:var(--muted);font-size:13px;margin:13px 0}
+@media(max-width:930px){.layout{grid-template-columns:1fr}.items{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));max-height:none}.description{min-height:0}}
+@media(max-width:520px){.viewport{min-height:230px}.toolbar span{flex-basis:100%}.board{width:91%}.part{--depth:5px}.caption{font-size:6px}}
+/* Materials and raised panel hardware */
+.viewport{touch-action:none;background:radial-gradient(ellipse at 49% 37%,#344a56,#16252f 72%,#101c24)}
+.board{transform:translate3d(var(--pan-x,0px),var(--pan-y,0px),0) scale(var(--zoom,1)) rotateX(var(--x,34deg)) rotateY(var(--y,0deg)) rotateZ(var(--z,-9deg));background:repeating-linear-gradient(0deg,#fff0 0 2px,#fff3 3px,#263a4510 4px),linear-gradient(145deg,#f2f4f5,#9da9af 52%,#dde4e7 78%,#a9b8bf);border-color:#6a767e;box-shadow:0 0 0 2px #bfc9cf,0 0 0 6px #202b32,inset 0 0 0 2px #e6edf0;isolation:auto}
+.board::before{inset:-6px;background:linear-gradient(165deg,#6c7479,#20262d 45%,#49575e);box-shadow:0 24px 50px #000a}
+.part{--depth:16px}.part .face,.part .base{border-radius:3px}
+.part .base{inset:-4px -5px;background:linear-gradient(150deg,#636f76,#303e46);box-shadow:1px 4px 7px #18262e80}
+.wall{position:absolute;pointer-events:none;background:linear-gradient(0deg,#45545b,#939da0 70%,#c8d1d3);border-radius:2px}
+.wall.front{top:100%;left:0;width:100%;height:var(--depth);transform-origin:top;transform:rotateX(90deg)}
+.wall.side{top:0;left:100%;width:var(--depth);height:100%;transform-origin:left;transform:rotateY(-90deg);filter:brightness(.74)}
+.valve .wall{background:linear-gradient(90deg,#1e2328 0 20%,#8c999e 20% 80%,#1e2328 80%)}
+.valve .face,.roller .face{background:repeating-linear-gradient(0deg,#fff0 0 2px,#63727c15 3px),linear-gradient(90deg,#242b31 0 20%,#e5e8e5 20% 80%,#242b31 80%);box-shadow:inset 0 1px 2px #fff9}
+.plate{position:absolute;left:24%;right:24%;top:32%;color:#24516b;font:bold clamp(4px,.64vw,8px)/1.08 system-ui;white-space:nowrap;pointer-events:none}
+.plate small{display:block;color:#39464d;border-top:1px solid #b16338;margin-top:2px;font-size:.75em}
+.part .hardware{border-radius:24%;background:linear-gradient(135deg,#fafaf7,#868d8d 48%,#dce5e6 62%,#58646a 94%);transform:translate(-50%,-50%) translateZ(calc(var(--depth) + 2px));box-shadow:0 2px 2px #2228}
+.hardware::after{content:"";position:absolute;inset:15%;border-radius:50%;background:radial-gradient(circle,#0f202c 0 31%,#3176a6 35% 59%,#bdc9cf 63% 77%,#56656b 82%)}
+.part .silencer{aspect-ratio:.72;background:repeating-linear-gradient(130deg,#b18451 0 1px,#e5c79a 1px 2px,#9e6d3b 2px 3px);border-radius:28%;border:1px solid #85603b}
+.silencer::after{display:none}
+.cylinder{--depth:22px}.cylinder .wall,.gauge .wall{display:none}
+.cylinder .base{inset:0 16% 0 0;background:linear-gradient(90deg,#87949a 0 14%,transparent 14% 85%,#87949a 85%);box-shadow:none}
+.cylinder .face{inset:12% 16% 12% 0;border-radius:10px;background:linear-gradient(0deg,#27353c,#54666b 17%,#b2c0c3 37%,#f4fcff 44%,#9aa7ac 53%,#dce5e7 59%,#536167 74%,#aebbbf 91%,#e9f2f3);box-shadow:0 6px 9px #283b45a0}
+.cylinder .face::before{background:linear-gradient(#3a4850,#eef6f9 46%,#85979f 66%,#353d44)}
+.cylinder .face::after{background:repeating-linear-gradient(90deg,#fff0 0 2px,#28384036 3px),linear-gradient(#53656f,#e9f1f3,#7e8d93);border-radius:3px}
+.collar{position:absolute;inset:-7% auto -7% 3%;width:14%;border-radius:20%;border-inline:1px solid #465863;background:linear-gradient(0deg,#43545b,#a1afb4 32%,#f4fcff 51%,#697981 77%,#c2cfd3);pointer-events:none}
+.collar.end{left:auto;right:1%}.cylinder .hardware{width:6%}
+.gauge .base,.gauge .face{border-radius:50%}.gauge .face{border-color:#222c34}
+.roller .face::before{top:-38%;height:34%;background:radial-gradient(circle at 87%,#dce4e6 0 9%,#222d31 11% 22%,transparent 24%),linear-gradient(170deg,transparent 22%,#7c898d 23%,#e0ebec 35%,#4a575c 69%,transparent 70%);filter:drop-shadow(1px 3px 2px #2636408c)}
+.push .dial,.selector .dial,.timer .dial{border-radius:50%;border:3px ridge #d7e0e3;box-shadow:0 3px 4px #172128}
+.push .dial{background:radial-gradient(ellipse at 36% 25%,#ff9286,#c22d29 58%,#701717)}
+.timer .dial{inset:11% 20%;border:3px ridge #e5decc;background:repeating-conic-gradient(#272929 0 7deg,#535757 7deg 10deg)}
+.timer .face{background:repeating-linear-gradient(0deg,#fff0 0 2px,#4a433526 3px),linear-gradient(135deg,#dbd6c7,#979181)}
+.manifold .hardware,.hand .hardware{width:45%}
+.viewport.panning{cursor:move}.part{touch-action:none}
+@media(max-width:520px){.part{--depth:8px}.cylinder{--depth:11px}}
+/* Solid housings, machined cylinders and contact shadows. */
+.board{background:repeating-linear-gradient(0deg,#fff0 0 2px,#fff2 3px,#283b4320 4px),linear-gradient(135deg,#edf3f6,#8f9da5 58%,#c5d1d7)}
+.part{--depth:calc(var(--unit) * 2.8)}
+.part.cylinder{--depth:calc(var(--unit) * 2.7)}
+.part.timer{--depth:calc(var(--unit) * 3.7)}
+.part .base{inset:-2px -3px;box-shadow:3px 7px 9px #1c293b99}
+.part .face{border-color:#56636a}
+.wall.back{bottom:100%;left:0;width:100%;height:var(--depth);transform-origin:bottom;transform:rotateX(-90deg);filter:brightness(.76)}
+.wall.left{right:100%;top:0;width:var(--depth);height:100%;transform-origin:right;transform:rotateY(90deg);filter:brightness(1.12)}
+.wall{border-radius:0;box-shadow:inset 0 1px #f2f8fa70,inset 0 -1px #12191e8c}
+.push .wall,.selector .wall{background:linear-gradient(0deg,#263139 0 35%,#8999a0 36% 43%,#9faeb1 44%,#525e65 100%)}
+.timer .wall{background:linear-gradient(0deg,#151e26 0 25%,#676659 26% 78%,#c1b9a4 95%)}
+.timer .face,.push .face,.selector .face{transform-style:preserve-3d}
+.push .dial,.selector .dial,.timer .dial{transform:translateZ(calc(var(--unit) * .85));box-shadow:0 0 0 2px #526169,1px 5px 5px #18232aa6}
+.cylinder .base{inset:0 12% 5% 0;background:linear-gradient(90deg,#70818a 0 17%,transparent 17% 81%,#70818a 81%);box-shadow:none}
+.cylinder .face{inset:17% 10% 17% 0;background:none;box-shadow:none;border:0;outline:0!important;filter:none!important;transform-style:preserve-3d}
+.cylinder .face::before,.cylinder .face::after{display:none}
+.cylinder[aria-pressed=true] .base{outline:2px solid #007778;outline-offset:3px}
+.round{position:absolute;top:50%;left:var(--start);width:var(--span);height:0;transform:translateZ(var(--lift));transform-style:preserve-3d;pointer-events:none}
+.round i{position:absolute;left:0;right:0;top:0;height:calc(var(--radius) * var(--facet-width) + .45px);transform:rotateX(var(--facet)) translateZ(var(--radius)) translateY(-50%);background:var(--facet-color);backface-visibility:hidden}
+.round b{position:absolute;top:0;width:calc(var(--radius) * 2);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#9faeb3 0 44%,#576770 46% 67%,#b9c7cc 69%);transform:translate(-50%,-50%) rotateY(-90deg);backface-visibility:hidden}
+.round b:last-child{left:100%;transform:translate(-50%,-50%) rotateY(90deg)}
+.round.thread i{background:repeating-linear-gradient(90deg,#0000 0 2px,#1b2e4555 2px 3px),var(--facet-color)}
+.caption{transform:translate3d(-50%,1px,1px);text-shadow:0 1px #f5f8fa90}
+/* Each edge fitting faces outwards from its housing wall. */
+.wall{transform-style:preserve-3d}
+.wall.side,.wall.back,.wall.left{filter:none}
+.part .hardware.edge-port{
+  width:calc(var(--unit) * 1.55);
+  transform:translate(-50%,-50%) rotateY(180deg) translateZ(calc(var(--unit) * .55));
+  box-shadow:0 0 0 calc(var(--unit) * .16) #546169,0 2px 3px #17242f80;
+}
+.part .hardware.edge-port.silencer{width:calc(var(--unit) * 1.65)}
+/* Supply assembly: upright cylinders, machined unions, and supply hose. */
+.part.gauge{--depth:calc(var(--unit) * 4.8)}
+.gauge .base{inset:9% -6%;border-radius:3px;background:linear-gradient(140deg,#e3eaed,#81929a 83%,#4f5d65);border:1px solid #63717a}
+.gauge .face{inset:auto;left:50%;top:50%;width:calc(var(--unit) * 6.15);height:calc(var(--unit) * 6.15);transform:translate(-50%,-50%) translateZ(var(--depth));border:calc(var(--unit) * .33) solid #1d262c;box-shadow:inset 0 0 3px #283b4c,0 0 0 1px #75818a;background:repeating-conic-gradient(from 226deg,#455965 0 1deg,#e6eef3 1.5deg 10deg)}
+.gauge .face::after{background:radial-gradient(ellipse at 22% 18%,#fff,#d4e2ec 69%,#a7bdcd);width:79%;height:79%}
+.gauge .face::before{content:"MPa";position:absolute;bottom:21%;color:#3d4c57;font:bold clamp(4px,.65vw,8px)/1 system-ui;z-index:1}
+.upright{position:absolute;left:var(--mount-x);top:var(--mount-y);width:0;height:0;transform:translateZ(var(--rise));transform-style:preserve-3d;pointer-events:none}
+.upright i{position:absolute;top:0;left:0;width:calc(var(--radius) * var(--facet-width));height:var(--length);transform-origin:top center;transform:translateX(-50%) rotateZ(var(--facet)) translateY(calc(-1 * var(--radius))) rotateX(90deg);background:var(--facet-color)}
+.upright-cap{position:absolute;width:calc(var(--radius) * 2);height:calc(var(--radius) * 2);transform:translate(-50%,-50%) translateZ(var(--length));border-radius:50%;background:radial-gradient(circle,#0c2139 0 30%,#005cc6 35% 62%,#438ee5 69%,#173869 82%);box-shadow:0 0 0 1px #37516c}
+.manifold .face{background:linear-gradient(105deg,#f2f4f2,#c1cccf 60%,#a0adb3);box-shadow:inset 0 1px 2px #fff}
+.hand .face{inset:0 11%;background:linear-gradient(135deg,#e1e4de,#939b96 71%,#6c7771)}
+.hand .dial{inset:24% 25%;border-radius:50%;border:1px solid #737b74;background:linear-gradient(135deg,#e6e6dc,#a5aba0 60%,#747f73);box-shadow:1px 3px 2px #252e298c}
+.hand .dial::after{inset:28% 3%;background:linear-gradient(#f2f1e6,#929c90);transform:rotate(-17deg);box-shadow:0 2px 2px #303a36a0}
+.supply-tube{position:absolute;left:10%;top:var(--tube-top);width:var(--tube-length);height:0;transform:rotateZ(90deg);transform-origin:left center;transform-style:preserve-3d;pointer-events:none}
+.supply-tube .round{--lift:calc(var(--unit) * 1.18)!important}
+.supply-tube .round i{background:linear-gradient(0deg,#063553,#32aafd 43%,#067ac9 85%);border:0}
+.supply-tube.return .round i{background:linear-gradient(0deg,#11171c,#4b5358 45%,#151d24 79%)}
+.supply-tube .round:not(:first-child) i{background:var(--facet-color)}
+/* Directional valve fittings and roller lever hardware. */
+.valve .face{background:linear-gradient(90deg,#191e23 0 20%,#e0e1da 20% 80%,#191e23 80%);transform-style:preserve-3d}
+.valve .face::after,.roller .face::before,.roller .face::after{display:none}
+.valve .plate{top:22%}
+.part .edge-port.silencer{--projection:calc(var(--unit) * 1.65);height:calc(var(--unit) * 1.45);aspect-ratio:auto;border-radius:24%;transform-style:preserve-3d;transform:translate(-50%,-50%) rotateY(180deg);box-shadow:none}
+.edge-port .fitting-barrel{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+.edge-port .fitting-barrel i{position:absolute;top:50%;left:50%;width:calc(var(--unit) * .68);height:var(--projection);transform-origin:50% 0;transform:translateX(-50%) rotateZ(var(--rib-angle)) translateY(calc(var(--unit) * -.58)) rotateX(90deg);background:var(--rib-color)}
+.edge-port .fitting-tip{position:absolute;inset:6%;border-radius:50%;transform:translateZ(var(--projection));background:radial-gradient(circle,#12181b 0 31%,#deded2 35% 66%,#9caaa7 71%,#5f6b70 82%)}
+.edge-port.silencer .fitting-tip{background:repeating-linear-gradient(45deg,#764723 0 1px,#b9864f 1px 2px,#d5a36a 2px 3px)}
+.part.roller{--depth:calc(var(--unit) * 2.4)}
+.roller .base{inset:6% -17%;border-radius:33% 28% 28% 33%;background:linear-gradient(140deg,#bbc2be,#6c7779)}
+.roller .face{background:linear-gradient(135deg,#e5e7e2,#a3aca9 55%,#738081);transform-style:preserve-3d}
+.roller .wall{background:linear-gradient(0deg,#566365,#9ca8a7 73%,#d4d9d4)}
+.fastener{position:absolute;width:calc(var(--unit) * 1.05);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%) translateZ(1px);background:conic-gradient(#525d60,#e9ece8,#657171,#cbd2d1,#525d60);box-shadow:0 1px 2px #28313280;pointer-events:none}
+.fastener::after{content:"";position:absolute;inset:27%;background:#576164;clip-path:polygon(34% 0,66% 0,66% 34%,100% 34%,100% 66%,66% 66%,66% 100%,34% 100%,34% 66%,0 66%,0 34%,34% 34%)}
+/* Close the case on all four sides so edge-on views show its thickness. */
+.board{--case-depth:calc(var(--unit, 5px) * 5.4);--case-rim:clamp(4px,1vw,10px)}
+.board::before{
+  inset:calc(-1 * var(--case-rim));border-radius:0;
+  transform:translateZ(calc(-1 * var(--case-depth)));
+  background:linear-gradient(145deg,#343e45,#20282f);
+  box-shadow:inset 0 0 0 3px #8b989e;
+  pointer-events:none
+}
+.case-wall{
+  position:absolute;pointer-events:none;
+  background:linear-gradient(to bottom,#d5dfe3 0 7%,#75848d 8% 14%,#303a42 15% 83%,#718089 84% 92%,#b9c4c9 93%)
+}
+.case-wall.front,.case-wall.back{
+  left:calc(-1 * var(--case-rim));width:calc(100% + 2 * var(--case-rim));height:var(--case-depth)
+}
+.case-wall.front{top:calc(100% + var(--case-rim));transform-origin:top;transform:rotateX(-90deg)}
+.case-wall.back{bottom:calc(100% + var(--case-rim));transform-origin:bottom;transform:rotateX(90deg);background:linear-gradient(to top,#cbd5d9 0 12%,#364048 13% 85%,#9ba9b0 86%)}
+.case-wall.left,.case-wall.right{
+  top:calc(-1 * var(--case-rim));height:calc(100% + 2 * var(--case-rim));width:var(--case-depth)
+}
+.case-wall.left{right:calc(100% + var(--case-rim));transform-origin:right;transform:rotateY(-90deg);background:linear-gradient(to left,#c3cdd1 0 11%,#414d55 12% 84%,#85959d 85%)}
+.case-wall.right{left:calc(100% + var(--case-rim));transform-origin:left;transform:rotateY(90deg);background:linear-gradient(to right,#e0e7ea 0 9%,#77878e 10% 16%,#34414a 17% 83%,#a9b5bb 84%)}
+.manifold .wall{background:linear-gradient(0deg,#45525a,#8a999e 66%,#c0cccf)}
+.hand .face{inset:0}
+.upward-elbow{
+  position:absolute;top:50%;width:calc(var(--unit) * 3.05);height:0;
+  transform:rotateZ(var(--port-direction));transform-origin:left center;
+  transform-style:preserve-3d;pointer-events:none
+}
+.upward-elbow .upright-cap{
+  background:radial-gradient(circle,#172329 0 29%,#e5e5d9 34% 65%,#a2aaa7 70% 87%,#57676c 92%);
+  box-shadow:0 0 0 1px #768483
+}
+.roller-arm{
+  position:absolute;left:12%;top:50%;width:74%;height:100%;box-sizing:border-box;
+  transform-origin:right center; transform:translateY(-50%) rotateY(var(--lever-angle, -14deg));
+  transform-style:preserve-3d;pointer-events:none;
+  border:1px solid #6b777d;border-radius:3px;
+  background:linear-gradient(#edf0ee,#a9b4b8 25%,#ccd4d4 66%,#778489)
+}
+.roller.on .roller-arm{--lever-angle:-7.7deg}
+.cylinder .stroke-shaft{width:calc(var(--span) + 51.5873% * var(--stroke,0))}
+.cylinder .stroke-tip{left:calc(var(--start) + 51.5873% * var(--stroke,0))}
+/* Plunger lengths meet the underside at the rim nearest the hinge. */
+.roller:not(.on) .roller-plunger{--length:calc(var(--unit) * .7879)!important}
+.roller-arm::before,.roller-arm::after{
+  content:"";position:absolute;left:0;right:0;height:calc(var(--unit) * .36);
+  background:linear-gradient(#657177,#d9dede)
+}
+.roller-arm::before{top:0;transform-origin:top;transform:rotateX(90deg)}
+.roller-arm::after{bottom:0;transform-origin:bottom;transform:rotateX(-90deg)}
+.roller-wheel{
+  position:absolute;left:6%;top:50%;width:calc(var(--unit) * 2.28);height:0;
+  transform-origin:left center;transform:translateY(calc(var(--unit) * -1.14)) rotateZ(90deg);
+  transform-style:preserve-3d
+}
+.part > .upward-elbow{
+  width:calc(var(--unit) * 1.48);
+  transform:translateZ(calc(var(--depth) * .48)) rotateZ(var(--port-direction))
+}
+
+
+.roller .wall.back .roller-plunger{transform:rotateY(180deg)}
+.roller .wall.back .roller-pivot{transform:rotateY(180deg)}
+/* Raised selector assembly with solid sides at every viewing angle. */
+.selector .face{background:linear-gradient(135deg,#f1f1eb,#b6bfc0);border-color:#929d9e}
+.actuator-block{
+  position:absolute;left:50%;top:50%;width:var(--block-width);height:var(--block-height);
+  transform:translate(-50%,-50%) rotateZ(var(--turn,0deg)) translateZ(var(--rise));
+  transform-style:preserve-3d;pointer-events:none
+}
+.actuator-block .roof{
+  position:absolute;inset:0;transform:translateZ(var(--depth));
+  background:linear-gradient(140deg,#494d52,#24272b 65%);border:1px solid #55595e;
+}
+.actuator-block .wall{background:linear-gradient(0deg,#303338,#1a1d20 65%,#41464b)}
+.selector-grip .roof::after{
+  content:"↔";position:absolute;inset:0;display:grid;place-items:center;
+  color:#dce2e3;font:bold calc(var(--unit) * 1) system-ui
+}
+.actuator-stack{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+.actuator-stack .upright-cap{
+  background:radial-gradient(ellipse at 33% 28%,#51555a,#282b30 65%,#15181b);
+  box-shadow:0 0 0 1px #313438
+}
+.selector-collar i{
+  background:repeating-linear-gradient(90deg,#fff4 0 1px,#0004 1px 2px),var(--facet-color)
+}
+.push .face{background:linear-gradient(135deg,#f1f1eb,#b6bfc0);border-color:#929d9e}
+.push-bezel .upright-cap{
+  background:conic-gradient(from 24deg,#f7fbfc,#8d989e,#eff6f8,#6d7a81,#c1cacf,#fff);
+  -webkit-mask-image:radial-gradient(circle closest-side,transparent 0 79%,#000 80%);
+  mask-image:radial-gradient(circle closest-side,transparent 0 79%,#000 80%);
+  box-shadow:none
+}
+.push-cap .upright-cap{
+  background:radial-gradient(ellipse at 38% 29%,#ef6877,#d9394d 73%,#a31228 91%,#701322);
+  box-shadow:inset 0 0 0 1px #a01e32
+}
+.timer .face{
+  transform-style:preserve-3d;
+  background:radial-gradient(ellipse at 23% 16%,#ede8d8,#ada794 74%,#827d70);
+}
+.timer .wall.front{
+  background:linear-gradient(145deg,#45494a,#20262a 65%,#13191d);
+  border:1px solid #545b5d;
+  border-radius:4px;
+}
+.timer-controls{
+  position:absolute;inset:0;transform:rotateY(180deg);
+  transform-style:preserve-3d;pointer-events:none
+}
+.timer-scale{
+  position:absolute;left:50%;top:50%;
+  width:calc(var(--unit)*3.1);aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,-50%) translateZ(1px);
+  border:1px solid #525759;
+  background:radial-gradient(circle,transparent 0 55%,#d3d3c8 56% 100%),
+    repeating-conic-gradient(#292e31 0 8deg,#b4b7b3 9deg 10deg);
+  color:#25292b;text-align:center;font:bold calc(var(--unit)*.31)/2 system-ui
+}
+.timer-knob .upright-cap{
+  background:linear-gradient(135deg,#555b60,#12171a 50%,#292e33);
+  box-shadow:inset 0 0 0 1px #3d4144
+}
+.timer-knob .upright-cap::after{
+  content:"";position:absolute;left:49%;top:5%;width:1px;height:29%;background:#d5d5cb
+}
+.timer-boss .upright-cap{
+  background:radial-gradient(circle,#353632 0 35%,#58584e 39% 48%,#c5bdaa 52% 76%,#7e7767 84%);
+  box-shadow:none
+}
+.timer-sticker{
+  position:absolute;left:22%;right:22%;bottom:10%;padding:2% 3%;
+  transform:translateZ(1px);background:#f1efe7;color:#252929;
+  text-align:left;font:bold calc(var(--unit)*.48)/1.15 system-ui;pointer-events:none
+}
+.timer-sticker small{display:block;font-size:.78em}
+/* Cast body and folded steel lever, around the existing roller axle. */
+.roller .face{
+  background:repeating-linear-gradient(105deg,#fff2 0 1px,transparent 1px 4px),
+    linear-gradient(135deg,#ecefeb,#b7bfbe 68%,#8a9698);
+  box-shadow:inset 0 0 0 1px #f1f4ef;
+}
+.roller-mark{
+  position:absolute;left:0;right:0;top:69%;text-align:center;
+  color:#313b3e;font:bold calc(var(--unit) * .61)/1.15 system-ui;
+  letter-spacing:.04em;transform:translateZ(.7px);pointer-events:none
+}
+.roller-arm{
+  background:linear-gradient(0deg,#778487,#dae2df 16%,#a8b4b4 24%,#c0cac8 80%,#edf2ee);
+  border-color:#829091;
+}
+.roller-arm::before,.roller-arm::after{
+  height:calc(var(--unit) * .48);
+  background:linear-gradient(#f0f4f1,#98a3a5 24%,#687679 85%);
+}
+.roller-wheel .round b{
+  left:0;
+  width:calc(var(--radius) * 2.04);
+  backface-visibility:visible;
+  background:radial-gradient(circle,#dae0dc 0 26%,#76868b 29% 35%,#cbd5d4 39% 49%,#59696f 53% 62%,#acb9bc 67% 78%,#748488 82%);
+}
+.roller-wheel .round b:last-child{left:100%}
+.roller-wheel .round i{
+  left:-.2px;right:-.2px;
+  height:calc(var(--radius) * var(--facet-width) + .65px);
+  background:linear-gradient(90deg,#435258 0 5%,#c7d0d0 8% 14%,var(--facet-color) 17% 83%,#c3cdcc 86% 92%,#57676b 96%);
+}
+.roller-fork{
+  position:absolute;left:-5%;width:23%;height:calc(var(--unit) * .95);
+  background:linear-gradient(135deg,#e1e7e3,#919fa1 60%,#667478);
+  border-radius:48% 35% 10% 10%;pointer-events:none;
+}
+.roller-fork.near{top:0;transform-origin:top;transform:rotateX(90deg)}
+.roller-fork.far{bottom:0;transform-origin:bottom;transform:rotateX(-90deg)}
+.roller-plunger .upright-cap{
+  background:radial-gradient(circle at 36% 34%,#f2d58d,#bc914e 63%,#78592e);
+  box-shadow:none
+}
+/* Close the machined cylinder sections at both ends. */
+.cylinder .face > .round > i{
+  left:-.2px;right:-.2px;
+  height:calc(var(--radius) * var(--facet-width) * 1.18 + .12px);
+}
+.cylinder .face > .round > b{
+  left:0;width:calc(var(--radius) * 2.02);
+  backface-visibility:visible;
+  background:radial-gradient(circle,#a9b6bb 0 54%,#697b83 55% 73%,#cbd6da 75% 92%,#889ba3 94%);
+}
+.cylinder .face > .round > b:last-child{left:100%}
+.part.hand{--depth:calc(var(--unit) * 3.35)}
+.hand .face{background:linear-gradient(140deg,#f0f4f3,#bcc9cb 72%,#8a9b9e);transform-style:preserve-3d}
+.hand[aria-pressed=true] .face{filter:none;outline:none}
+.hand[aria-pressed=true] .base{outline:2px solid #007778;outline-offset:2px}
+.hand .wall.front{background:linear-gradient(#6f8387,#9eafb2 72%,#c4cece)}
+.hand .wall.side{background:linear-gradient(90deg,#76898c,#adbec0 72%,#d0dada)}
+.hand .wall{background:linear-gradient(0deg,#829498,#bcc8c9 70%,#e4eae8)}
+.hand .actuator-block .roof,.hand .actuator-block .wall{
+  background:linear-gradient(135deg,#e8eeeb,#afbcbd 72%,#829597);
+  border-color:#a1b0b1;border-radius:3px
+}
+.hand .actuator-stack .upright-cap{
+  background:radial-gradient(ellipse at 35% 28%,#e4ebe8,#a5b5b7 75%,#849598);
+  box-shadow:none
+}
+.hand-collar i{
+  background:repeating-linear-gradient(90deg,#fff5 0 1px,#39484c55 1px 2px),var(--facet-color)
+}
+.hand .hand-socket{width:calc(var(--unit) * 2.02);transform:translateZ(calc(var(--unit) * 1.18)) rotateZ(var(--port-direction))}
+.hand-socket .round b{left:0;backface-visibility:visible}
+.hand-socket .round b:last-child{
+  left:100%;background:radial-gradient(circle,#293b42 0 39%,#74868b 41% 53%,#c7d2d2 56% 84%,#91a2a6 88%)
+}
+.hand .wall.side{transform-style:preserve-3d}
+.hand-side-detail{
+  position:absolute;left:50%;top:50%;
+  width:calc(var(--unit) * 5.35);height:calc(var(--unit) * 2.8);
+  transform:translate(-50%,-50%) rotateY(180deg) rotateZ(90deg) translateZ(.35px);
+  color:#52666b;pointer-events:none;
+}
+.hand-recess{
+  position:absolute;inset:5% 9% 46%;
+  border:1px solid #e3ebea;border-radius:2px;
+  background:linear-gradient(#516367 0 15%,#7d9194 35%,#c7d5d5 80%,#a6b8b9);
+  box-shadow:inset 0 2px 3px #233b42aa;
+}
+.hand-recess::after{
+  content:"";position:absolute;left:48%;top:0;bottom:0;width:6%;
+  background:linear-gradient(90deg,#8d9fa0,#dce6e4);
+}
+.hand-flow{
+  position:absolute;left:34%;right:34%;bottom:5%;height:38%;
+  display:grid;place-items:center;border:1px solid #829598;border-radius:2px;
+  background:#b5c4c5;font:bold calc(var(--unit) * .84)/1 system-ui;
+  text-shadow:1px 1px #e2ece9;
+}
+.hand-side-hole{
+  position:absolute;bottom:9%;width:calc(var(--unit) * .49);aspect-ratio:1;
+  border-radius:50%;background:radial-gradient(circle at 65% 68%,#52656a,#26383c 69%,#dde7e6 76%);
+}
+.hand-side-hole:nth-child(3){left:16%}
+.hand-side-hole:last-child{right:16%}
+.gauge-shell i{
+  width:calc(var(--radius) * var(--facet-width) + .32px);
+}
+.gauge-bezel i{
+  background:linear-gradient(to bottom,#141a1f,var(--facet-color) 31% 72%,#718087);
+}
+.gauge-bezel .upright-cap{
+  background:radial-gradient(circle closest-side,transparent 0 86%,#0b1116 87% 91%,#505c62 93% 96%,#a7b4ba 98%);
+  box-shadow:none;
+}
+.gauge .face{
+  width:calc(var(--unit) * 5.57);
+  height:calc(var(--unit) * 5.57);
+  border-width:calc(var(--unit) * .10);
+  box-shadow:inset 0 0 3px #283b4c;
+}
+/* ---------- Air simulation ---------- */
+.gauge-needle{position:absolute;left:50%;bottom:50%;width:calc(var(--unit) * .22);height:36%;margin-left:calc(var(--unit) * -.11);border-radius:2px 2px 0 0;background:#c8202f;transform-origin:50% 100%;transform:rotate(var(--needle,-135deg));transition:transform .35s ease-out;z-index:3}
+.gauge-needle::after{content:"";position:absolute;left:50%;bottom:0;width:calc(var(--unit) * .7);aspect-ratio:1;border-radius:50%;background:#263943;transform:translate(-50%,50%)}
+/* A filter on the face would flatten its 3D hardware, so selection outlines the base instead. */
+.part[aria-pressed=true] .face{filter:none!important;outline:none!important}
+.part[aria-pressed=true] .base{outline:2px solid #2fe0d6;outline-offset:3px}
+.actuator-block{transition:transform .15s}
+.selector-grip{--turn:-28deg}
+.selector.on .selector-grip{--turn:28deg}
+.hand.on .actuator-block{--turn:90deg}
+.push.on .push-cap{--rise:calc(var(--unit) * 1.68)!important}
+.state-led{position:absolute;right:5%;top:9%;width:calc(var(--unit) * .9);aspect-ratio:1;border-radius:50%;background:#4b2d2d;box-shadow:inset 0 0 0 1px #0008}
+.part.on .state-led{background:#3dff8f;box-shadow:0 0 6px #3dff8f}
+.port-hit{position:absolute;left:var(--hx,50%);top:var(--hy,50%);width:calc(var(--unit) * 1.8);height:calc(var(--unit) * 1.8);border-radius:50%;transform:translate(-50%,-50%) translateZ(var(--hz));pointer-events:auto;cursor:crosshair;display:grid;place-items:center;font:800 calc(var(--unit) * .78)/1 system-ui;color:#fff;background:#1769c8e0;box-shadow:0 0 0 calc(var(--unit) * .18) #e9f6ff;text-shadow:0 1px 1px #000a}
+.port-hit.in-elbow{left:81%;top:0;transform:translate(-50%,-50%) translateZ(var(--hz)) rotateZ(calc(-1 * var(--port-direction)))}
+.port-hit:hover{background:#3d93ff}
+.port-hit.live{background:#00b7d8;box-shadow:0 0 0 calc(var(--unit) * .18) #c9fbff,0 0 8px #3ff}
+.port-hit.plugged{background:radial-gradient(circle at 40% 35%,#59626a,#1c2226 70%);color:#ffd7a0;box-shadow:0 0 0 calc(var(--unit) * .22) #0d1114}
+.port-hit.leaking{background:#ff7a1a;box-shadow:0 0 0 calc(var(--unit) * .2) #fff1e0,0 0 10px #ff8a3d;animation:leak-pulse .6s ease-in-out infinite alternate}
+@keyframes leak-pulse{to{box-shadow:0 0 0 calc(var(--unit) * .35) #ffd2a8,0 0 16px #ff8a3d}}
+.viewport.plugging .port-hit{cursor:cell}
+.simbar input[type=checkbox]{width:auto;accent-color:var(--cyan)}
+.port-hit.pending{background:#f0a400;box-shadow:0 0 0 calc(var(--unit) * .25) #fff3b0,0 0 10px #ffc94a}
+.hoses{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:5}
+.hoses path{fill:none;stroke-linecap:round}
+.hoses .hose-hit{stroke:transparent;stroke-width:12px;pointer-events:stroke;cursor:pointer}
+.hoses .hose-hit:hover + .hose-body{stroke:#ff8a65}
+.simbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px;border-top:1px solid var(--line);font-size:13px}
+.simbar label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.roller.unbound .caption{color:#b3261e}
+.logic .face{background:linear-gradient(135deg,#eef2f3,#a7b6bc 70%,#7d8f96);transform-style:preserve-3d}
+.logic-label{position:absolute;inset:0;display:grid;place-items:center;font:900 calc(var(--unit) * 1.45)/1 system-ui;color:#1f2d35;letter-spacing:.02em}
+.logic-label.low{align-items:end;padding-bottom:8%}
+.settings{display:grid;gap:8px;margin:0 0 6px;font-size:13px;color:var(--muted)}
+.settings:empty{display:none}
+.settings label{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}
+.settings input{grid-column:1 / -1;width:100%;accent-color:var(--cyan)}
+.settings output{color:var(--ink);font-weight:700}
+/* While the camera moves, drop the tiny horizontal elbow tubes (most of the
+   3D planes on the board) so rotation stays fluid; they return on release. */
+.board.moving .upward-elbow > .round{display:none}
+.viewport.cropping,.viewport.cropping *{cursor:crosshair!important}
+.crop-box{position:absolute;z-index:6;border:2px dashed #ffd54a;background:#ffd54a1f;pointer-events:none;border-radius:4px}
+.control[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}
+.workbar input#student-id{width:150px}.workbar input#student-name{width:190px}
+.workbar[hidden]{display:none}
+.simbar output.work-status{font-weight:400;color:var(--muted)}
+.add-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex-basis:100%}
+.simbar select{font:inherit;color:var(--ink);background:#0f1d27;border:1px solid #405763;border-radius:6px;padding:3px 6px;max-width:100%}
+.control:disabled{opacity:.45;cursor:default}
+.corner-ref{position:absolute;width:1px;height:1px;pointer-events:none}
+.part.added{cursor:move}
+.part.added .caption{color:#0b5e91}
+.simbar input[type=range]{width:90px;accent-color:var(--cyan);padding:0;border:0;background:none}
+.simbar input{width:64px;font:inherit;color:var(--ink);background:#0f1d27;border:1px solid #405763;border-radius:6px;padding:3px 6px}
+.simbar output{margin-left:auto;font-weight:700;color:var(--cyan)}
+.simbar output.warn{color:#ffb74d}
+.sim-hint{flex-basis:100%;margin:0;color:var(--muted);font-size:12.5px}
+.live-info{white-space:pre-line;font-size:13.5px;color:var(--ink);background:#0f1d27;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 6px;min-height:2.6em}
+.live-info:empty{display:none}
+</style>
+</head>
+<body>
+<main>
+<header><h1>แผงฝึกนิวแมติกส์ 3D</h1><p>ต่อสายลมระหว่างอุปกรณ์ 19 ตัวแล้วจำลองการทำงานที่แรงดันจ่าย 5 barg</p></header>
+<div class="layout">
+<section class="viewer" aria-label="ภาพสามมิติของแผงฝึก">
+<div class="viewport" id="viewport"><div class="board" id="board"><span class="case-wall front" aria-hidden="true"></span><span class="case-wall back" aria-hidden="true"></span><span class="case-wall left" aria-hidden="true"></span><span class="case-wall right" aria-hidden="true"></span></div></div>
+<div class="toolbar"><span>ลากซ้ายเพื่อหมุนรอบแผง · กด Ctrl ค้างแล้วลากซ้าย หรือใช้ลากขวาเพื่อเลื่อน · หมุนล้อเพื่อซูม</span>
+<button class="control" id="left" aria-label="หมุนซ้าย">↶</button>
+<button class="control" id="right" aria-label="หมุนขวา">↷</button>
+<button class="control" id="zoom-out" aria-label="ย่อภาพ">−</button><button class="control" id="zoom-in" aria-label="ขยายภาพ">+</button><button class="control" id="top">มุมบน</button>
+<button class="control" id="reset">มุม 3D</button>
+<button class="control" id="crop-zoom" aria-pressed="false">⬚ ซูมเฉพาะส่วน</button>
+</div>
+<div class="simbar">
+<label>แรงดันจ่าย <input id="supply" type="number" min="0" max="8" step="0.5" value="5"> barg</label>
+<label>ตั้งเวลา Timer <input id="delay" type="number" min="0" max="30" step="0.5" value="3"> วินาที</label>
+<button class="control" id="undo" title="เลิกทำ (Ctrl+Z)" disabled>⟲ เลิกทำ</button>
+<button class="control" id="redo" title="ทำซ้ำ (Ctrl+Y)" disabled>⟳ ทำซ้ำ</button>
+<button class="control" id="clear-hoses">ถอดสายลมทั้งหมด</button>
+<button class="control" id="plug-mode" aria-pressed="false" title="คลิกพอร์ตเพื่ออุด/ถอดจุก (หรือคลิกขวาที่พอร์ตได้ตลอด)">⬤ จุกปิด</button>
+<label title="ชุดจริงใช้ข้อต่อแบบเสียบสาย พอร์ตที่ไม่ได้ต่อสายและไม่ได้อุดจุกจะมีลมรั่ว (ยกเว้นบล็อกกระจายลมที่มีวาล์วกันกลับ)"><input type="checkbox" id="realistic" checked> พอร์ตเปิดมีลมรั่ว</label>
+<button class="control" id="sound" aria-pressed="true">🔊 เสียงเปิด</button>
+<span class="add-row"><label>เพิ่มอุปกรณ์ <select id="add-type"></select></label>
+<button class="control" id="add-part">＋ เพิ่ม</button>
+<button class="control" id="remove-part" title="ลบอุปกรณ์ที่เลือก (Delete)" disabled>ลบอุปกรณ์ที่เลือก (Del)</button>
+<button class="control" id="extend-board">↑ ขยายแผงด้านบน</button>
+<button class="control" id="fit-board">ย่อแผงให้พอดี</button></span>
+<label>ความดัง <input id="volume" type="range" min="0" max="1" step="0.05" value="0.7" aria-label="ระดับเสียง"></label>
+<output id="sim-status" aria-live="polite"></output>
+<p class="sim-hint">คลิกจุดพอร์ตสีน้ำเงินทีละ 2 จุดเพื่อต่อสายลม (Esc ยกเลิก) · คลิกที่สายเพื่อถอด (Ctrl+Z เลิกทำ) · คลิกขวาที่พอร์ตเพื่ออุด/ถอดจุก · คลิกวาล์วลมหลักเพื่อเปิด/ปิดลม · กดปุ่มแดงหรือลูกกลิ้งค้างไว้ · คลิก Selector เพื่อสลับ · ลากอุปกรณ์ที่เพิ่มเองเพื่อย้ายตำแหน่ง</p>
+</div>
+<div class="simbar workbar" id="workbar">
+<label>รหัสนักศึกษา <input id="student-id" inputmode="numeric" maxlength="15" placeholder="เช่น 6501012345678" autocomplete="off"></label>
+<label>ชื่อ–สกุล <input id="student-name" maxlength="80" autocomplete="off"></label>
+<button class="control" id="export-work">💾 บันทึกไฟล์ส่งงาน</button>
+<button class="control" id="import-work">📂 เปิดไฟล์งาน</button>
+<button class="control" id="new-work">งานใหม่</button>
+<input type="file" id="import-file" accept=".json,application/json" hidden>
+<output id="work-status" class="work-status"></output>
+</div>
+</section>
+<aside aria-label="ข้อมูลอุปกรณ์">
+<div aria-live="polite"><h2 id="name"></h2><p class="meta" id="meta"></p><p class="description" id="description"></p><p class="live-info" id="live"></p>
+<div class="settings" id="settings"></div></div>
+<div class="items" id="items" aria-label="เลือกชนิดอุปกรณ์"></div>
+</aside>
+</div>
+<footer>ตำแหน่งอ้างอิงจากภาพชุดฝึก ขนาดและตำแหน่งพอร์ตเป็นภาพโดยประมาณ · สมมติฐานการจำลอง: กระบอกสูบ Ø20 มม. ก้าน Ø8 มม. · วาล์วสั่งด้วยลมสลับเมื่อสัญญาณ ≥ 1.5 bar · พอร์ตที่ไม่ได้ต่อสายและไม่ได้อุดจุกมีลมรั่ว ยกเว้นบล็อกกระจายลม (ปิดได้ด้วยช่อง "พอร์ตเปิดมีลมรั่ว") · แยกสายด้วยข้อต่อสามทาง หรือต่อหลายสายที่พอร์ตเดียว</footer>
+</main>
+<script>
+// Opened inside the teacher's checking page (#embed): show and test circuits only, never store anything.
+const PERSIST = location.hash !== '#embed';
+const components = [
+  {name:'วาล์วเปิด–ปิดลมหลัก', label:'Hand Valve', short:'Hand', kind:'hand', detail:'เปิดหรือปิดทางจ่ายลมอัดเข้าสู่แผงฝึก', positions:[[7.1,78.5,5.8,9]], ports:[[50,0],[50,100]], logic:'hand', portNames:[null,null]},
+  {name:'เกจวัดความดันลม', label:'Pressure Gauge', short:'Gauge', kind:'gauge', detail:'แสดงค่าความดันลมในทางจ่ายหลักของแผง', positions:[[6,59,8,13]], logic:'gauge'},
+  {name:'บล็อกกระจายลม', label:'Air Distributor', short:'Distributor', kind:'manifold', detail:'แยกลมจากทางจ่ายหลักไปยังวงจรย่อยผ่านช่องออก 6 ช่อง', positions:[[6,6,7,43]], ports:[[51,9],[51,25],[51,41],[51,57],[51,73],[51,89]], logic:'manifold', portNames:['o1','o2','o3','o4','o5','o6'], portLabels:['P','P','P','P','P','P']},
+  {name:'วาล์ว 3/2 สั่งด้วยลมด้านเดียว', label:'3/2 Way Single Valve', short:'3/2 Single', kind:'valve', detail:'รับสัญญาณลมด้านเดียวเพื่อสลับทางลม แล้วสปริงพาวาล์วกลับเมื่อระบายสัญญาณ ใช้สั่งกระบอกสูบทางเดียวหรือส่งต่อสัญญาณ', positions:[[20,71,15,11]], ports:[[28,0],[70,100],[28,100],[100,55]], logic:'v32', portNames:['2','1',null,'12']},
+  {name:'วาล์ว 5/2 สั่งด้วยลมด้านเดียว', label:'5/2 Way Single Valve', short:'5/2 Single', kind:'valve', detail:'สลับทางจ่ายและทางระบายลมของกระบอกสูบสองทาง สปริงพาวาล์วกลับเมื่อระบายสัญญาณ', positions:[[20,48,15,11]], ports:[[29,0],[71,0],[26,100],[50,100],[74,100],[100,55]], logic:'v52s', portNames:['4','2',null,'1',null,'14']},
+  {name:'วาล์ว 5/2 สั่งด้วยลมสองด้าน', label:'5/2 Way Double Valve', short:'5/2 Double', kind:'valve', detail:'ใช้สัญญาณลมคนละด้านเพื่อสั่งยืดหรือหด วาล์วค้างตำแหน่งล่าสุดจนกว่าจะได้รับสัญญาณอีกด้าน', positions:[[20,9,15,11],[20,29,15,11]], ports:[[29,0],[71,0],[26,100],[50,100],[74,100],[0,55],[100,55]], logic:'v52d', portNames:['4','2',null,'1',null,'14','12']},
+  {name:'วาล์วเลือกตำแหน่ง 3/2', label:'3/2 Way Selector Valve', short:'Selector', kind:'selector', detail:'หมุนเพื่อเลือกและค้างสถานะสัญญาณลม ใช้เลือกโหมดหรือเปิดสัญญาณค้าง', positions:[[35.8,80,8,10],[47.7,80,8,10]], ports:[[0,50],[100,50]], logic:'selector', portNames:['1','2']},
+  {name:'วาล์วปุ่มกด 3/2', label:'3/2 Way Push Button', short:'Push', kind:'push', detail:'กดปุ่มสีแดงเพื่อสั่งวงจรชั่วขณะ เมื่อปล่อยปุ่ม วาล์วจะกลับตำแหน่งเดิม', positions:[[59.6,80,8,10],[71.5,80,8,10]], ports:[[0,50],[100,50]], logic:'push', portNames:['1','2']},
+  {name:'วาล์วลูกกลิ้ง 3/2', label:'3/2 Way Roller Valve', short:'Roller 3/2', kind:'roller', detail:'เมื่อลูกกลิ้งถูกกด วาล์วจะเปลี่ยนตำแหน่งเพื่อส่งสัญญาณลม ใช้ตรวจจับตำแหน่งก้านสูบในวงจรควบคุมลำดับ', positions:[[66.4,18.42,9,9],[79.4,18.42,9,9],[66.4,38.42,9,9],[79.4,38.42,9,9]], ports:[[0,37],[100,72]], logic:'roller', portNames:['1','2']},
+  {name:'กระบอกสูบลมทางเดียว', label:'Single Acting Cylinder', short:'Single Acting', kind:'cylinder', detail:'ใช้ลมอัดขับก้านสูบในทิศทางหนึ่ง สปริงพากลับเมื่อระบายลม', positions:[[41,50,28,10]], ports:[[7,22]], logic:'cylS', portNames:['A'], portLabels:['+']},
+  {name:'กระบอกสูบลมสองทาง', label:'Double Acting Cylinder', short:'Double Acting', kind:'cylinder', detail:'จ่ายลมสลับเข้าคนละด้านของลูกสูบเพื่อขับก้านให้ยืดและหด', positions:[[41,9,28,10],[41,29,28,10]], ports:[[7,22],[66.6,22]], logic:'cylD', portNames:['A','B'], portLabels:['+','−']},
+  {name:'วาล์วหน่วงเวลาลม', label:'Timer Valve · SMC VR2110-01', short:'Timer', kind:'timer', detail:'เมื่อได้รับสัญญาณลมเข้า จะหน่วงตามเวลาที่ตั้งด้วยปุ่มหมุนก่อนส่งสัญญาณลมออก', positions:[[82,77,12,13]], ports:[[16,0],[84,0],[100,50]], logic:'timer', portNames:['1','2','12']},
+  // Devices from the kit specification that are not mounted on the pictured board: add them with "เพิ่มอุปกรณ์".
+  {name:'วาล์วควบคุมอัตราการไหลทางเดียว', label:'One-way Flow Control Valve', short:'Flow', kind:'logic', detail:'ลมไหลจาก 1 → 2 ผ่านรูหรี่ที่ปรับได้ ส่วนทาง 2 → 1 ไหลผ่านเช็ควาล์วได้เต็มที่ ใช้ปรับความเร็วกระบอกสูบ: ต่อพอร์ต 1 เข้ากระบอกสูบและพอร์ต 2 เข้าวาล์ว จะเป็นการหรี่ลมออก (meter-out)', positions:[], size:[9,8], ports:[[0,50],[100,50]], logic:'flow', portNames:['1','2']},
+  {name:'ข้อต่อสามทาง 4 มม.', label:'Tee Connector 4 mm', short:'Tee', kind:'logic', detail:'ทั้งสามทางเชื่อมถึงกัน ใช้แยกสายลมหนึ่งเส้นไปสองจุด ทางที่ไม่ได้ใช้ต้องอุดด้วยจุกปิด (คลิกขวาที่พอร์ต) ไม่อย่างนั้นลมจะรั่ว', positions:[], size:[5,5], ports:[[0,50],[100,50],[50,0]], logic:'tee', portNames:['a','b','c'], portLabels:['','','']}
+];
+
+const board = document.querySelector('#board');
+const viewport = document.querySelector('#viewport');
+const items = document.querySelector('#items');
+const nameField = document.querySelector('#name');
+const metaField = document.querySelector('#meta');
+const description = document.querySelector('#description');
+const partButtons = [];
+const itemButtons = [];
+const portHits = new Map();
+const portGeo = new Map();   // port id -> position on its part (%) and the direction its fitting points
+const instances = [];
+const instanceByButton = new Map();
+const itemCounts = [];
+const layout = {extra:0};
+const sim = {supply:5, delay:3, hoses:[], plugs:new Set(), realistic:true, plugMode:false, leakPorts:[],
+  pending:null, cursor:null, selected:null, leaks:false, p:() => 0};
+
+function select(componentIndex, instanceIndex = null) {
+  const component = components[componentIndex];
+  nameField.textContent = component.name;
+  const count = instances.filter(inst => inst.ci === componentIndex).length;
+  const counter = instanceIndex === null ? count + ' ตัวบนแผง' : 'ตัวที่ ' + (instanceIndex + 1) + ' / ' + count;
+  metaField.textContent = component.label + ' · ' + counter;
+  description.textContent = component.detail;
+  const shownIndex = instanceIndex ?? (count === 1 ? 0 : null);
+  sim.selected = shownIndex === null ? null : componentIndex + '.' + shownIndex;
+  const chosen = instances.find(inst => inst.id === sim.selected);
+  const removeButton = document.querySelector('#remove-part');
+  if (removeButton) removeButton.disabled = !chosen?.added;
+  if (layout.ready) showSettings(chosen);
+  for (const entry of partButtons) {
+    const active = entry.componentIndex === componentIndex && (instanceIndex === null || entry.instanceIndex === instanceIndex);
+    entry.button.setAttribute('aria-pressed', active);
+  }
+  itemButtons.forEach((button, index) => button.setAttribute('aria-pressed', index === componentIndex));
+}
+
+for (const [left, top] of [[1,2],[98,2],[1,96],[98,96]]) {
+  const screw = document.createElement('span');
+  screw.className = 'screw';
+  screw.style.cssText = 'left:' + left + '%;top:' + top + '%';
+  screw.dataset.baseTop = top;
+  board.append(screw);
+}
+
+const metal = ['#e5f0f5','#f9fbfc','#becdd3','#879aa3','#607780','#41555e','#34444c','#35444b',
+  '#42525a','#4b6069','#546971','#6c7d83','#8e9da4','#b9cacf','#87999f','#aec1c9'];
+
+function addRound(parent, start, span, radius, threaded = false, colors = metal) {
+  const round = document.createElement('span');
+  round.className = threaded ? 'round thread' : 'round';
+  round.style.cssText = '--start:' + start + '%;--span:' + span + '%;--radius:calc(var(--unit) * ' + radius + ');--lift:0px';
+  // Each facet is a separate 3D plane the browser must sort every frame while
+  // the view rotates, so keep counts low: 16 sides for barrels, 8 for thin
+  // tubes and fittings (a few pixels across, where more sides never show).
+  if (radius < .6 && colors.length > 8) colors = colors.filter((_, index) => index % 3 === 0);
+  else if (radius < 1 && colors.length > 8) colors = colors.filter((_, index) => index % 2 === 0);
+  const subdivisions = radius >= 1.2 ? 2 : 1;   // large cylinder barrels stay smooth up close
+  const segments = colors.length * subdivisions;
+  round.style.setProperty('--facet-width', 2 * Math.tan(Math.PI / segments));
+  for (let index = 0; index < segments; index++) {
+    const colorIndex = Math.floor(index / subdivisions);
+    const blend = (index % subdivisions) / subdivisions * 100;
+    const color = 'color-mix(in srgb, ' + colors[colorIndex] + ', ' +
+      colors[(colorIndex + 1) % colors.length] + ' ' + blend + '%)';
+    const facet = document.createElement('i');
+    facet.style.cssText = '--facet:' + (360 * index / segments) + 'deg;--facet-color:' + color;
+    round.append(facet);
+  }
+  round.append(document.createElement('b'), document.createElement('b'));
+  parent.append(round);
+  return round;
+}
+
+const gaugeColors = ['#10171b','#202c33','#52636d','#3b4a54','#20292f','#181e22','#303a40','#1a2228'];
+const blueRimColors = ['#1c65be','#287cda','#499bf1','#2472cd','#155eb8','#0e49a2','#0d3d84','#1555aa'];
+const unionColors = ['#bcc8cd','#63747f','#dbe1de','#75858d','#55646f','#a4b1b6'];
+
+function addUpright(parent, x, y, radius, length, rise, colors, cap = false, subdivisions = 1) {
+  const segments = colors.length * subdivisions;
+  const housing = document.createElement('span');
+  housing.className = 'upright';
+  housing.style.cssText = '--mount-x:' + x + '%;--mount-y:' + y + '%;--radius:calc(var(--unit)*' + radius +
+    ');--length:calc(var(--unit)*' + length + ');--rise:calc(var(--unit)*' + rise +
+    ');--facet-width:' + (2 * Math.tan(Math.PI / segments));
+  for (let index = 0; index < segments; index++) {
+    const colorIndex = Math.floor(index / subdivisions);
+    const nextColor = colors[(colorIndex + 1) % colors.length];
+    const blend = (index % subdivisions) * 100 / subdivisions;
+    const color = blend === 0 ? colors[colorIndex] :
+      'color-mix(in srgb, ' + colors[colorIndex] + ', ' + nextColor + ' ' + blend + '%)';
+    const facet = document.createElement('i');
+    facet.style.cssText = '--facet:' + (360 * index / segments) + 'deg;--facet-color:' + color;
+    housing.append(facet);
+  }
+  if (cap) {
+    const rim = document.createElement('span');
+    rim.className = 'upright-cap';
+    housing.append(rim);
+  }
+  parent.append(housing);
+  return housing;
+}
+
+for (const [top, length, dark] of [[49,10,true],[72,6,false],[88,11,false]]) {
+  const hose = document.createElement('span');
+  hose.className = dark ? 'supply-tube return' : 'supply-tube';
+  hose.style.cssText = '--tube-top:' + top + '%;--tube-length:' + (length / 1.55) + '%';
+  hose.dataset.baseTop = top;
+  addRound(hose, 0, 100, .37);
+  addRound(hose, 0, 14, .70);
+  addRound(hose, 86, 14, .70);
+  board.append(hose);
+}
+
+function addUpwardElbow(parent, x, y, direction, rise) {
+  const elbow = document.createElement('span');
+  elbow.className = 'upward-elbow';
+  elbow.style.cssText = 'left:' + x + '%;top:' + y + '%;--port-direction:' + direction + 'deg';
+  addRound(elbow, 0, 100, .43);
+  addRound(elbow, 8, 36, .57);
+  addUpright(elbow, 81, 0, .51, rise, -.25, unionColors, true);
+  parent.append(elbow);
+  return elbow;
+}
+
+// Clickable hose connection point sitting on top of a fitting.
+function addPortHit(parent, id, label, z, inElbow, x, y) {
+  const hit = document.createElement('span');
+  hit.className = inElbow ? 'port-hit in-elbow' : 'port-hit';
+  hit.dataset.port = id;
+  hit.textContent = label;
+  hit.title = 'พอร์ต ' + label;
+  hit.style.setProperty('--hz', 'calc(var(--unit) * ' + z + ')');
+  if (!inElbow) {
+    hit.style.setProperty('--hx', x + '%');
+    hit.style.setProperty('--hy', y + '%');
+  }
+  parent.append(hit);
+  portHits.set(id, hit);
+}
+
+function addActuatorBlock(parent, width, height, rise, depth, grip = false) {
+  const block = document.createElement('span');
+  block.className = grip ? 'actuator-block selector-grip' : 'actuator-block';
+  for (const [key, value] of Object.entries({'block-width':width, 'block-height':height, rise, depth})) {
+    block.style.setProperty('--' + key, 'calc(var(--unit) * ' + value + ')');
+  }
+  block.innerHTML = '<span class="roof"></span><span class="wall front"></span><span class="wall back"></span><span class="wall left"></span><span class="wall side"></span>';
+  parent.append(block);
+}
+
+function addSelectorKnob(face) {
+  const stack = document.createElement('span');
+  stack.className = 'actuator-stack';
+  face.append(stack);
+  // The square seat, chrome collar and grip share a single mounting axis.
+  const dark = ['#32363b','#454a4f','#393e43','#22262b','#1d2025','#292d32','#363a3f','#282c31'];
+  const chrome = ['#edf3f4','#fff','#bac4c8','#737f86','#dadee0','#f3f7f7','#929da1','#c8d0d3'];
+  addActuatorBlock(face, 5.25, 4.8, 0, 1.05);
+  addUpright(stack, 50, 50, 2.05, .55, 1.05, dark);
+  addUpright(stack, 50, 50, 1.98, .63, 1.6, chrome).classList.add('selector-collar');
+  addUpright(stack, 50, 50, 1.84, .26, 2.23, chrome);
+  addUpright(stack, 50, 50, 1.53, .68, 2.49, dark, true);
+  addActuatorBlock(face, 2.08, .95, 3.17, 1.14, true);
+}
+
+function addPushButton(face) {
+  const stack = document.createElement('span');
+  stack.className = 'actuator-stack';
+  face.append(stack);
+
+  const black = ['#161a1d','#33393d','#23282c','#171b1f','#111416','#1e2327','#2d3337','#1b2023'];
+  const chrome = ['#eef5f7','#9ca9b1','#e2ecee','#74838b','#c0ccd0','#f5fbfc','#849299','#cdd5d9'];
+  const red = ['#8d1527','#ce3147','#b62239','#921729','#731223','#8e182a','#b9253a','#a61d31'];
+
+  addActuatorBlock(face, 5.25, 4.8, 0, 1.05);
+  addUpright(stack, 50, 50, 2.02, .95, 1.05, black);
+  addUpright(stack, 50, 50, 2.12, .57, 2, chrome, true).classList.add('push-bezel');
+  addUpright(stack, 50, 50, 1.79, .43, 2, red, true).classList.add('push-cap');
+}
+
+function addHandValveKnob(face) {
+  const stack = document.createElement('span');
+  stack.className = 'actuator-stack';
+  const plastic = ['#e4ebe9','#c2cecd','#aabbbc','#91a4a7','#8a9b9f','#abbcbc','#d3ddda','#c4d1cf'];
+  addUpright(stack, 50, 50, 1.38, .78, 0, plastic, true).classList.add('hand-collar');
+  face.append(stack);
+  addActuatorBlock(face, 2.38, .86, .78, 1.58);
+}
+
+function addHandValveSocket(button, x, y) {
+  const socket = document.createElement('span');
+  socket.className = 'upward-elbow hand-socket';
+  socket.style.cssText = 'left:' + x + '%;top:' + y + '%;--port-direction:' + (y === 0 ? -90 : 90) + 'deg';
+  const plastic = ['#e5ecea','#d4dfde','#b2c1c3','#97aaad','#86999d','#a5b5b7','#c7d2d3','#d6e0df'];
+  addRound(socket, 0, 74, 1.04, false, plastic);
+  addRound(socket, 71, 15, 1.10);
+  addRound(socket, 83, 17, 1.05, false, plastic);
+  button.append(socket);
+}
+
+function addFastener(parent, x, y) {
+  const screw = document.createElement('span');
+  screw.className = 'fastener';
+  screw.style.cssText = 'left:' + x + '%;top:' + y + '%';
+  parent.append(screw);
+}
+
+function addSilencer(port) {
+  const barrel = document.createElement('span');
+  barrel.className = 'fitting-barrel';
+  const colors = ['#a46c35','#d09a5e','#84542e','#99622e','#ba8347','#d8ad73'];
+  colors.forEach((color, index) => {
+    const rib = document.createElement('i');
+    rib.style.cssText = '--rib-angle:' + (index * 60) + 'deg;--rib-color:' + color;
+    barrel.append(rib);
+  });
+  const tip = document.createElement('span');
+  tip.className = 'fitting-tip';
+  barrel.append(tip);
+  port.append(barrel);
+}
+
+function addTimerControls(button, face) {
+  const front = button.querySelector('.wall.front');
+  const controls = document.createElement('span');
+  controls.className = 'timer-controls';
+  controls.innerHTML = '<span class="timer-scale">TIME DELAY</span>';
+  front.append(controls);
+
+  const dark = ['#272c2f','#42484c','#171b20','#363b3f','#181e21','#373e43','#15191c','#313639'];
+  addUpright(controls, 50, 50, .76, .7, .12, dark);
+  addUpright(controls, 50, 50, 1.01, .52, .82, dark, true).classList.add('timer-knob');
+  for (const x of [18, 82]) addFastener(controls, x, 50);
+
+  addUpright(face, 50, 38, 1.17, .58, 0, unionColors, true).classList.add('timer-boss');
+  for (const x of [12, 88]) {
+    for (const y of [13, 49, 87]) addFastener(face, x, y);
+  }
+  face.insertAdjacentHTML('beforeend', '<span class="timer-sticker">VR2110-01<small>SMC · TIME DELAY VALVE</small></span>');
+}
+
+const updateUnit = () => board.style.setProperty('--unit', board.clientWidth / 100 + 'px');
+updateUnit();
+new ResizeObserver(updateUnit).observe(board);
+
+components.forEach((component, componentIndex) => {
+  const item = document.createElement('button');
+  item.className = 'item';
+  item.textContent = component.name;
+  const count = document.createElement('span');
+  count.textContent = component.positions.length;
+  item.append(count);
+  item.addEventListener('click', () => select(componentIndex));
+  items.append(item);
+  itemButtons.push(item);
+  itemCounts.push(count);
+  component.positions.forEach((rect, instanceIndex) => buildPart(componentIndex, instanceIndex, rect));
+});
+
+function buildPart(componentIndex, instanceIndex, [left, top, width, height], added = false) {
+    const component = components[componentIndex];
+    const button = document.createElement('button');
+    button.className = 'part ' + component.kind + (added ? ' added' : '');
+    button.setAttribute('aria-label', component.name + ' ตัวที่ ' + (instanceIndex + 1));
+    button.style.cssText = '--left:' + left + '%;--top:' + top + '%;--width:' + width + '%;--height:' + height + '%';
+    button.innerHTML = '<span class="base"></span><span class="wall front"></span><span class="wall side"></span><span class="wall back"></span><span class="wall left"></span><span class="face"><span class="dial"></span></span><span class="caption"></span>';
+    button.querySelector('.caption').textContent = component.short;
+    button.querySelector('.dial').remove();
+    const face = button.querySelector('.face');
+    if (component.kind === 'hand') {
+      addHandValveKnob(face);
+      button.querySelector('.wall.side').insertAdjacentHTML('beforeend',
+        '<span class="hand-side-detail"><span class="hand-recess"></span><span class="hand-flow">←</span><span class="hand-side-hole"></span><span class="hand-side-hole"></span></span>');
+    }
+    if (component.kind === 'timer') addTimerControls(button, face);
+    if (component.kind === 'selector') addSelectorKnob(face);
+    if (component.kind === 'push') addPushButton(face);
+    if (component.kind === 'gauge') {
+      addUpright(button, 50, 50, 2.99, .38, 0, gaugeColors, false, 3).classList.add('gauge-shell');
+      addUpright(button, 50, 50, 2.84, 4.23, .34, gaugeColors, false, 3).classList.add('gauge-shell');
+      addUpright(button, 50, 50, 3.15, .54, 4.52, gaugeColors, true, 3).classList.add('gauge-shell', 'gauge-bezel');
+      for (const y of [13, 87]) addUpright(button, 17, y, .39, .55, .19, unionColors);
+      const needle = document.createElement('span');
+      needle.className = 'gauge-needle';
+      face.append(needle);
+    }
+    if (component.kind === 'cylinder') {
+      addRound(face, 10, 61, 1.26);
+      addRound(face, 0, 13, 1.55);
+      addRound(face, 67, 14, 1.55);
+      const shaft = addRound(face, 80, 13, .51);
+      const thread = addRound(face, 91, 9, .82, true);
+      shaft.classList.add('stroke-shaft');
+      thread.classList.add('stroke-tip');
+      if (component.ports.length === 2) addRound(face, 98, 12, 1.32).classList.add('stroke-tip');
+    }
+    if (component.kind === 'roller') {
+      const arm = document.createElement('span');
+      const atRetractedEnd = instanceIndex % 2 === 0;
+      button.classList.add(atRetractedEnd ? 'inner' : 'outer');
+      arm.className = atRetractedEnd ? 'roller-arm inner' : 'roller-arm outer';
+      const wheel = document.createElement('span');
+      wheel.className = 'roller-wheel';
+      addRound(wheel, 0, 100, .76);
+      arm.innerHTML = '<span class="roller-fork near"></span><span class="roller-fork far"></span>';
+      arm.append(wheel);
+      face.insertAdjacentHTML('beforeend', '<span class="roller-mark">3/2 · ROLLER</span>');
+      const sensingWall = button.querySelector('.wall.back');
+      sensingWall.append(arm);
+      addUpright(sensingWall, 86, 50, .58, .35, 0, unionColors).classList.add('roller-pivot');
+      addUpright(sensingWall, 47, 50, .35, .4272, 0, ['#806039','#b99051','#dfbf7b','#ab8145','#916b38','#bd9a57'], true).classList.add('roller-plunger');
+      addFastener(face, 29, 51);
+      addFastener(face, 68, 51);
+      const bracket = button.querySelector('.base');
+      addFastener(bracket, 8, 51);
+      addFastener(bracket, 92, 51);
+    }
+    if (component.kind === 'valve') {
+      addFastener(face, 37, 74);
+      addFastener(face, 63, 74);
+      face.insertAdjacentHTML('beforeend', '<span class="plate">AirTAC<small>' + component.short + '</small></span>');
+    }
+    if (component.kind === 'logic') {
+      face.insertAdjacentHTML('beforeend', '<span class="logic-label' + (component.logic === 'flow' ? ' low' : '') + '">' +
+        {flow:'FC', tee:'T'}[component.logic] + '</span>');
+      if (component.logic === 'flow') {
+        const knob = ['#272c2f','#42484c','#171b20','#363b3f','#181e21','#373e43'];
+        addUpright(face, 50, 22, .7, .9, 0, knob, true).classList.add('flow-knob');
+      }
+    }
+    if (component.kind === 'valve' || component.kind === 'timer' || (component.kind === 'logic' && component.logic !== 'tee')) face.insertAdjacentHTML('beforeend', '<span class="state-led"></span>');
+    const instanceId = componentIndex + '.' + instanceIndex;
+    for (const [portIndex, [x, y]] of (component.ports ?? []).entries()) {
+      const portName = component.portNames?.[portIndex];
+      const portId = instanceId + ':' + portName;
+      const portLabel = component.portLabels?.[portIndex] ?? portName;
+      if (component.kind === 'hand') {
+        addHandValveSocket(button, x, y);
+        continue;
+      }
+      if (component.kind === 'cylinder') {
+        addPortHit(addUpwardElbow(face, x / .9, 50, y < 50 ? -90 : 90, 1.35), portId, portLabel, 1.18, true);
+        portGeo.set(portId, {instId:instanceId, x, y:50, dir:[0, y < 50 ? -1 : 1]});
+        continue;
+      }
+      if (component.kind === 'manifold') {
+        addUpright(button, x, y, .73, 1.28, 2.8, unionColors);
+        addUpright(button, x, y, .63, .48, 4.08, blueRimColors, true);
+        addPortHit(button, portId, portLabel, 4.64, false, x, y);
+        portGeo.set(portId, {instId:instanceId, x, y, dir:[1, 0]});
+        continue;
+      }
+      const port = document.createElement('span');
+      const exhaust = !portName;   // unnamed ports are built-in exhausts with a silencer
+      port.className = exhaust ? 'hardware silencer' : 'hardware';
+      // Port coordinates on an edge identify the housing wall, not the lid.
+      const edge = x === 0 ? 'left' : x === 100 ? 'side' :
+        y === 0 ? 'back' : y === 100 ? 'front' : null;
+      if (!exhaust) {
+        const direction = {left:180, side:0, back:-90, front:90}[edge];
+        addPortHit(addUpwardElbow(button, x, y, direction, 1.95), portId, portLabel, 1.78, true);
+        portGeo.set(portId, {instId:instanceId, x, y, dir:{left:[-1, 0], side:[1, 0], back:[0, -1], front:[0, 1]}[edge]});
+        continue;
+      }
+      if (edge) {
+        const onEnd = edge === 'left' || edge === 'side';
+        port.classList.add('edge-port');
+        port.style.cssText = 'left:' + (onEnd ? 47 : x) + '%;top:' + (onEnd ? y : 47) + '%';
+        addSilencer(port);
+        button.querySelector('.wall.' + edge).append(port);
+      } else {
+        port.style.cssText = 'left:' + x + '%;top:' + y + '%';
+        button.append(port);
+      }
+    }
+    if (added) button.querySelector('.caption').textContent = component.short + ' #' + (instanceIndex + 1);
+    const instance = {id:instanceId, ci:componentIndex, comp:component, logic:component.logic, ii:instanceIndex, button,
+      on:false, manual:false, contact:false, stroke:0, force:0, timerStart:null,
+      left, top, width, height, added};
+    if (component.logic === 'flow') instance.setting = .3;                 // throttle opening 1 -> 2
+    if (component.logic === 'cylD') instance.meter = {A:1, B:1};           // built-in meter-out flow controls
+    instances.push(instance);
+    placePart(instance);
+    instanceByButton.set(button, instance);
+    button.addEventListener('click', event => {
+      select(componentIndex, instanceIndex);
+      if (event.target.closest('.port-hit')) return;
+      if (instance.logic === 'hand' || instance.logic === 'selector') instance.on = !instance.on;
+    });
+    board.append(button);
+    partButtons.push({button, componentIndex, instanceIndex});
+    itemCounts[componentIndex].textContent = instances.filter(inst => inst.ci === componentIndex).length;
+    if (layout.ready) updateCaptions();   // geometry helpers exist only after setup
+    return instance;
+}
+
+// Board height grows upward by `layout.extra` (in units of the original
+// board height, where the original board spans 0–100). Part coordinates stay
+// in those base units, so added parts above the original edge have negative tops.
+function boardHeight() { return 100 + layout.extra; }
+function placePart(inst) {
+  const total = boardHeight();
+  inst.button.style.setProperty('--left', inst.left + '%');
+  inst.button.style.setProperty('--top', (inst.top + layout.extra) / total * 100 + '%');
+  inst.button.style.setProperty('--height', inst.height / total * 100 + '%');
+}
+function layoutBoard() {
+  const total = boardHeight();
+  board.style.aspectRatio = String(1.55 * 100 / total);
+  board.style.width = (88 * Math.max(.6, 100 / total)) + '%';
+  for (const inst of instances) placePart(inst);
+  for (const el of board.querySelectorAll('[data-base-top]')) {
+    const base = Number(el.dataset.baseTop);
+    const y = el.classList.contains('screw') && base < 50 ? base : base + layout.extra;
+    el.style.setProperty(el.classList.contains('screw') ? 'top' : '--tube-top', y / total * 100 + '%');
+  }
+  updateUnit();
+}
+
+function cylinderName(inst) { return (inst.logic === 'cylD' ? 'DA' : 'SA') + (inst.ii + 1); }
+
+// ---------------------------------------------------------------------------
+// Roller geometry (board base units). A roller is pressed when the rod head
+// of a cylinder whose axis runs just above the roller's back edge is over the
+// roller's wheel. Proportions come from the drawn parts: the cylinder face is
+// 90% of the part width, the rod travels 51.59% of the face, the head is the
+// last 12% (DA) / 9% (SA) of the face, and the wheel sits 16.4% into the roller.
+// ---------------------------------------------------------------------------
+const ROLLER_GAP = 4.42;          // roller back edge below the cylinder axis
+const WHEEL_REACH = .8;           // wheel sits this far behind the head's end at a stroke end
+function rodGeometry(cyl) {
+  const face = cyl.width * .9;
+  const headLength = face * (cyl.logic === 'cylD' ? .12 : .09);
+  const end0 = cyl.left + face * (cyl.logic === 'cylD' ? 1.1 : 1);
+  const travel = face * .515873;
+  return {axis:cyl.top + cyl.height / 2, end0, travel, headLength, end:end0 + travel * cyl.stroke};
+}
+const wheelX = roller => roller.left + roller.width * .164;
+const isCylinder = inst => inst.logic === 'cylD' || inst.logic === 'cylS';
+// Which cylinder (if any) can press this roller, and at what stroke fraction.
+function rollerSensing(roller) {
+  for (const cyl of instances) {
+    if (!isCylinder(cyl)) continue;
+    const rod = rodGeometry(cyl);
+    const gap = roller.top - rod.axis;
+    if (gap < ROLLER_GAP - 2 || gap > ROLLER_GAP + 2) continue;
+    const at = (wheelX(roller) + WHEEL_REACH - rod.end0) / rod.travel;
+    const slack = (rod.headLength + WHEEL_REACH) / rod.travel;
+    if (at < -slack || at > 1 + slack) continue;
+    return {cyl, at:Math.min(1, Math.max(0, at))};
+  }
+  return null;
+}
+function rollerPressed(roller) {
+  const sensing = rollerSensing(roller);
+  if (!sensing) return false;
+  const rod = rodGeometry(sensing.cyl);
+  const wheel = wheelX(roller);
+  // Pressed from the moment the head's end is within 0.1 unit of a stroke-end
+  // roller's wheel (the last ~1% of stroke) until the head has passed it.
+  return wheel >= rod.end - rod.headLength - WHEEL_REACH && wheel <= rod.end - WHEEL_REACH + .1;
+}
+// Snap targets for a roller: under each cylinder's axis, at the retracted and extended ends.
+function rollerSnaps(width) {
+  const snaps = [];
+  for (const cyl of [...instances].reverse()) {   // newest cylinder first
+    if (!isCylinder(cyl)) continue;
+    const rod = rodGeometry(cyl);
+    const top = rod.axis + ROLLER_GAP;
+    for (const end of [rod.end0, rod.end0 + rod.travel]) snaps.push([end - WHEEL_REACH - width * .164, top]);
+  }
+  return snaps;
+}
+
+function updateCaptions() {
+  for (const inst of instances) {
+    const caption = inst.button.querySelector('.caption');
+    if (isCylinder(inst)) caption.textContent = cylinderName(inst) + ' · ' + inst.comp.short;
+    if (inst.logic === 'flow') caption.textContent = 'Flow ' + Math.round(inst.setting * 100) + '%';
+    if (inst.logic === 'roller') {
+      const sensing = rollerSensing(inst);
+      inst.button.classList.toggle('unbound', !sensing);
+      caption.textContent = !sensing ? 'ไม่อยู่ใต้ก้านสูบ' : cylinderName(sensing.cyl) + ' ' +
+        (sensing.at < .04 ? 'หดสุด' : sensing.at > .96 ? 'ยืดสุด' : Math.round(sensing.at * 100) + '%');
+    }
+  }
+}
+select(0);
+
+const initialView = { tilt:39, yaw:-12, angle:-11, x:0, y:0, zoom:1 };
+let camera = { ...initialView };
+let drag;
+let suppressClick = false;
+
+function updateView(changes) {
+  camera = { ...camera, ...changes };
+  // Set the transform itself, not inherited custom properties: changing an
+  // inherited variable would restyle every one of the board's thousands of
+  // descendants on each drag frame.
+  board.style.transform = 'translate3d(' + camera.x + 'px,' + camera.y + 'px,0) scale(' + camera.zoom + ') rotateX(' +
+    camera.tilt + 'deg) rotateY(' + camera.yaw + 'deg) rotateZ(' + camera.angle + 'deg)';
+  // Lighter detail while the view keeps moving; full detail shortly after it stops.
+  if (!board.classList.contains('moving')) board.classList.add('moving');
+  clearTimeout(updateView.settle);
+  updateView.settle = setTimeout(() => { if (!drag) board.classList.remove('moving'); }, 180);
+}
+
+function zoomAt(factor, x = 0, y = 0) {
+  const zoom = Math.max(.4, Math.min(8, camera.zoom * factor));
+  const ratio = zoom / camera.zoom;
+  updateView({ zoom, x:x + (camera.x - x) * ratio, y:y + (camera.y - y) * ratio });
+}
+
+updateView(initialView);
+
+document.querySelector('#left').onclick = () => updateView({yaw:camera.yaw - 15});
+document.querySelector('#right').onclick = () => updateView({yaw:camera.yaw + 15});
+document.querySelector('#zoom-out').onclick = () => zoomAt(1 / 1.25);
+document.querySelector('#zoom-in').onclick = () => zoomAt(1.25);
+document.querySelector('#top').onclick = () => updateView({...initialView, tilt:0, yaw:0, angle:0});
+document.querySelector('#reset').onclick = () => updateView(initialView);
+viewport.addEventListener('contextmenu', event => event.preventDefault());
+viewport.addEventListener('auxclick', event => {
+  if (event.button === 1) event.preventDefault();
+});
+viewport.addEventListener('wheel', event => {
+  event.preventDefault();
+  const bounds = viewport.getBoundingClientRect();
+  const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? bounds.height : 1;
+  const delta = Math.max(-150, Math.min(150, event.deltaY * units));
+  zoomAt(Math.exp(-delta * .0025),
+    event.clientX - bounds.left - bounds.width / 2,
+    event.clientY - bounds.top - bounds.height / 2);
+}, {passive:false});
+
+viewport.addEventListener('pointerdown', event => {
+  if (event.button > 2 || drag) return;
+  suppressClick = false;
+  const pan = event.button !== 0 || event.ctrlKey || event.shiftKey;
+  if (event.button !== 0) event.preventDefault();
+  drag = {id:event.pointerId, x:event.clientX, y:event.clientY, start:camera, pan, moved:false,
+    degreesPerPixel:360 / Math.max(1, viewport.clientWidth)};
+  // Capture on the original button so a stationary click still selects it.
+  const target = event.target.closest('.part') ?? viewport;
+  target.setPointerCapture(event.pointerId);
+});
+viewport.addEventListener('pointermove', event => {
+  if (drag?.id !== event.pointerId) return;
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+  drag.moved = true;
+  suppressClick = true;
+  viewport.classList.add(drag.pan ? 'panning' : 'dragging');
+  if (drag.pan) {
+    updateView({x:drag.start.x + dx, y:drag.start.y + dy});
+  } else {
+    updateView({
+      tilt:(drag.start.tilt - dy * drag.degreesPerPixel) % 360,
+      yaw:(drag.start.yaw + dx * drag.degreesPerPixel) % 360
+    });
+  }
+});
+viewport.addEventListener('lostpointercapture', event => {
+  if (drag?.id !== event.pointerId) return;
+  drag = undefined;
+  viewport.classList.remove('panning', 'dragging');
+  clearTimeout(updateView.settle);
+  updateView.settle = setTimeout(() => board.classList.remove('moving'), 120);
+});
+viewport.addEventListener('click', event => {
+  if (suppressClick && event.detail > 0) {
+    event.stopPropagation();
+    suppressClick = false;
+  }
+}, true);
+
+// ---------------------------------------------------------------------------
+// Pneumatic simulation: hoses join ports into air lines; each device routes
+// its ports by its current state; a line carries supply pressure when it
+// reaches the main hand valve's outlet.
+// ---------------------------------------------------------------------------
+const PILOT_MIN = 1.5;              // bar needed to shift an air-piloted valve
+const BORE = 20, ROD = 8;           // mm, assumed training-kit cylinder
+const AREA_CAP = Math.PI * BORE * BORE / 4;
+const AREA_ROD = AREA_CAP - Math.PI * ROD * ROD / 4;
+const FRICTION = 6, SPRING0 = 12, SPRING_K = 10;   // N
+const STORAGE_KEY = 'pneumatic-hoses-v1';
+const hand = instances.find(inst => inst.logic === 'hand');
+const gaugeNeedle = board.querySelector('.gauge-needle');
+const liveField = document.querySelector('#live');
+const statusField = document.querySelector('#sim-status');
+const supplyInput = document.querySelector('#supply');
+const delayInput = document.querySelector('#delay');
+
+const svgNS = 'http://www.w3.org/2000/svg';
+const hoseLayer = document.createElementNS(svgNS, 'svg');
+hoseLayer.setAttribute('class', 'hoses');
+viewport.append(hoseLayer);
+
+function routes(inst) {
+  switch (inst.logic) {
+    case 'manifold': {
+      const links = ['o1','o2','o3','o4','o5','o6'].map(port => ['M', port]);
+      if (inst.added) return {links};   // extra block: fed by a hose into any of its ports
+      return hand.on ? {links, supply:['M']} : {links, vent:['M']};
+    }
+    case 'v32': case 'selector': case 'push': case 'roller': case 'timer':
+      return inst.on ? {links:[['1','2']]} : {vent:['2']};
+    case 'v52s': case 'v52d':
+      return inst.on ? {links:[['1','4']], vent:['2']} : {links:[['1','2']], vent:['4']};
+    // Throttle in 1 -> 2, check valve lets 2 -> 1 flow freely. Pressure passes both ways.
+    case 'flow': return {links:[['1', '2', inst.setting, 1]]};
+    case 'tee': return {links:[['a', 'b'], ['a', 'c']]};
+  }
+  return {};
+}
+
+const VALVE_EXHAUST = .7;    // relative flow out through a valve exhaust and silencer
+
+function solvePressure() {
+  const parent = new Map();
+  const find = key => { let next = parent.get(key); while (next !== undefined) { key = next; next = parent.get(key); } return key; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
+  // Directed edges with relative flow capacity, used to judge how fast cylinders can move.
+  const edges = [];
+  for (const [a, b] of sim.hoses) { union(a, b); edges.push([a, b, 1], [b, a, 1]); }
+  const fed = [], vented = [], vents = [];
+  for (const inst of instances) {
+    const r = routes(inst);
+    for (const [a, b, ab = 1, ba = 1] of r.links ?? []) {
+      const ia = inst.id + ':' + a, ib = inst.id + ':' + b;
+      union(ia, ib);
+      edges.push([ia, ib, ab], [ib, ia, ba]);
+    }
+    for (const port of r.supply ?? []) fed.push(inst.id + ':' + port);
+    for (const entry of r.vent ?? []) {
+      const [port, capacity] = Array.isArray(entry) ? entry : [entry, VALVE_EXHAUST];
+      vented.push(inst.id + ':' + port);
+      vents.push([inst.id + ':' + port, capacity]);
+    }
+  }
+  // Realistic mode: a push-in fitting with no hose and no plug is open to the air.
+  // Distributor outlets have check valves, so they seal by themselves.
+  const openPorts = [];
+  if (sim.realistic) {
+    const hosed = new Set(sim.hoses.flat());
+    for (const id of portHits.keys()) {
+      if (hosed.has(id) || sim.plugs.has(id) || instById(portGeo.get(id).instId).logic === 'manifold') continue;
+      openPorts.push(id);
+      vented.push(id);
+      vents.push([id, 1]);
+    }
+  }
+  sim.graph = {edges, fed, vents};
+  const live = new Set(fed.map(find));
+  const open = new Set(vented.map(find));
+  sim.leaks = [...live].some(group => open.has(group));
+  sim.leakPorts = openPorts.filter(id => live.has(find(id)));
+  // A line fed from supply but also open to an exhaust collapses to a fraction of supply.
+  sim.p = id => {
+    const group = find(id);
+    if (!live.has(group)) return 0;
+    return open.has(group) ? sim.supply * .25 : sim.supply;
+  };
+}
+
+function updateStates(now) {
+  let changed = false;
+  const set = (inst, value) => { if (inst.on !== value) { inst.on = value; changed = true; } };
+  for (const inst of instances) {
+    const signal = port => sim.p(inst.id + ':' + port) >= PILOT_MIN;
+    switch (inst.logic) {
+      case 'v32': set(inst, signal('12')); break;
+      case 'v52s': set(inst, signal('14')); break;
+      case 'v52d': {
+        const s14 = signal('14'), s12 = signal('12');
+        if (s14 && !s12) set(inst, true);
+        else if (s12 && !s14) set(inst, false);
+        break;   // no signal or both: valve holds its last position
+      }
+      case 'push': set(inst, inst.manual); break;
+      case 'roller': set(inst, inst.manual || inst.contact); break;
+      case 'timer':
+        if (!signal('12')) inst.timerStart = null;
+        else if (inst.timerStart === null) inst.timerStart = now;
+        set(inst, inst.timerStart !== null && now - inst.timerStart >= sim.delay * 1000);
+        break;
+    }
+  }
+  return changed;
+}
+
+// Widest-path flow capacities over the last solved network: how freely air can
+// reach each port from supply (fill) and leave it to an exhaust (exhaust).
+function flowCapacities() {
+  const {edges, fed, vents} = sim.graph ?? {edges:[], fed:[], vents:[]};
+  const fill = new Map(fed.map(id => [id, 1]));
+  const exhaust = new Map();
+  for (const [id, capacity] of vents) exhaust.set(id, Math.max(exhaust.get(id) ?? 0, capacity));
+  for (let pass = 0, changed = true; changed && pass < 200; pass++) {
+    changed = false;
+    for (const [u, v, f] of edges) {
+      if (fill.has(u)) {
+        const value = Math.min(fill.get(u), f);
+        if (value > (fill.get(v) ?? 0) + 1e-9) { fill.set(v, value); changed = true; }
+      }
+      if (exhaust.has(v)) {
+        const value = Math.min(exhaust.get(v), f);
+        if (value > (exhaust.get(u) ?? 0) + 1e-9) { exhaust.set(u, value); changed = true; }
+      }
+    }
+  }
+  return {fill, exhaust};
+}
+
+function moveCylinders(dt) {
+  const flows = flowCapacities();
+  for (const inst of instances) {
+    if (inst.logic !== 'cylS' && inst.logic !== 'cylD') continue;
+    const pA = sim.p(inst.id + ':A');
+    const pB = inst.logic === 'cylD' ? sim.p(inst.id + ':B') : 0;
+    let force = pA * .1 * AREA_CAP - pB * .1 * AREA_ROD;          // 1 bar = 0.1 N/mm²
+    if (inst.logic === 'cylS') force -= SPRING0 + SPRING_K * inst.stroke;
+    inst.force = force;
+    if (Math.abs(force) <= FRICTION) continue;
+    // Speed is limited by the narrowest point for air going in and air going out.
+    // An open, unconnected port vents like a normal valve exhaust.
+    const extending = force > 0;
+    const inPort = extending ? 'A' : 'B', outPort = extending ? 'B' : 'A';
+    const fillCap = inst.logic === 'cylD' || extending ? flows.fill.get(inst.id + ':' + inPort) ?? 1 : 1;
+    const exhaustCap = inst.logic === 'cylD' || !extending ?
+      (flows.exhaust.get(inst.id + ':' + outPort) ?? VALVE_EXHAUST) * (inst.meter?.[outPort] ?? 1) : VALVE_EXHAUST;
+    inst.flowScale = Math.min(2, Math.min(fillCap, exhaustCap) / VALVE_EXHAUST);
+    const speed = Math.min(2.2, Math.max(.35, Math.abs(force) / 157)) / .7 * inst.flowScale;   // ≈0.7 s full stroke at 5 bar
+    inst.stroke = Math.min(1, Math.max(0, inst.stroke + Math.sign(force) * speed * dt));
+  }
+  for (const inst of instances) {
+    if (inst.logic !== 'roller') continue;
+    inst.contact = rollerPressed(inst);
+  }
+}
+
+function portCenter(id, origin) {
+  const box = portHits.get(id).getBoundingClientRect();
+  return {x:box.left + box.width / 2 - origin.left, y:box.top + box.height / 2 - origin.top};
+}
+
+// ---------------------------------------------------------------------------
+// Hose routing. Hoses lie on the board and run around devices: an A* search
+// on a grid over the board plane (orthogonal moves, turn penalty, devices as
+// obstacles), then the route is projected to the screen through the board's
+// perspective homography. Routing works in "physical" units where x and y
+// are both 1% of the board width (base y units are 1/1.55 of that).
+// ---------------------------------------------------------------------------
+const PHYS = 1 / 1.55;
+const ROUTE = {cell:1.25, margin:1.3, key:'', at:0, paths:[]};
+const instById = id => instances.find(inst => inst.id === id);
+
+function obstacleRect(inst) {
+  // Cylinders only block their barrel band; rollers tuck under the rod line.
+  const inset = isCylinder(inst) ? .17 : 0;
+  return {x0:inst.left, x1:inst.left + inst.width,
+    y0:(inst.top + inst.height * inset) * PHYS, y1:(inst.top + inst.height * (1 - inset)) * PHYS};
+}
+
+function portAnchor(id) {
+  const geo = portGeo.get(id);
+  const inst = instById(geo.instId);
+  const port = [inst.left + geo.x / 100 * inst.width, (inst.top + geo.y / 100 * inst.height) * PHYS];
+  const r = obstacleRect(inst), m = ROUTE.margin + .9;
+  // Walk out along the fitting's direction until clear of the device's keep-out zone.
+  const [dx, dy] = geo.dir;
+  const t = dx > 0 ? r.x1 + m - port[0] : dx < 0 ? port[0] - (r.x0 - m) : dy > 0 ? r.y1 + m - port[1] : port[1] - (r.y0 - m);
+  return {port, exit:[port[0] + dx * Math.max(1.5, t), port[1] + dy * Math.max(1.5, t)]};
+}
+
+function routeHoses() {
+  const cell = ROUTE.cell;
+  const top = -layout.extra * PHYS, bottom = 100 * PHYS;
+  const cols = Math.ceil(100 / cell) + 1, rows = Math.ceil((bottom - top) / cell) + 1;
+  const blocked = new Uint8Array(cols * rows);
+  const usage = new Float32Array(cols * rows);
+  for (const inst of instances) {
+    const r = obstacleRect(inst);
+    const c0 = Math.max(0, Math.floor((r.x0 - ROUTE.margin) / cell)), c1 = Math.min(cols - 1, Math.ceil((r.x1 + ROUTE.margin) / cell));
+    const r0 = Math.max(0, Math.floor((r.y0 - ROUTE.margin - top) / cell)), r1 = Math.min(rows - 1, Math.ceil((r.y1 + ROUTE.margin - top) / cell));
+    for (let row = r0; row <= r1; row++) for (let col = c0; col <= c1; col++) blocked[row * cols + col] = 1;
+  }
+  const toCell = ([x, y]) => {
+    const col = Math.min(cols - 1, Math.max(0, Math.round(x / cell)));
+    const row = Math.min(rows - 1, Math.max(0, Math.round((y - top) / cell)));
+    return row * cols + col;
+  };
+  const center = index => [index % cols * cell, Math.floor(index / cols) * cell + top];
+  const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+
+  function search(start, goal) {
+    const states = cols * rows * 4;
+    const cost = new Float32Array(states).fill(Infinity);
+    const from = new Int32Array(states).fill(-1);
+    const heap = [];   // [priority, state]
+    const push = (p, s) => { heap.push([p, s]); let i = heap.length - 1;
+      while (i > 0) { const j = (i - 1) >> 1; if (heap[j][0] <= heap[i][0]) break; [heap[i], heap[j]] = [heap[j], heap[i]]; i = j; } };
+    const pop = () => { const top = heap[0], last = heap.pop();
+      if (heap.length) { heap[0] = last; let i = 0;
+        for (;;) { const l = 2 * i + 1, r = l + 1; let m = i;
+          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+          if (m === i) break; [heap[i], heap[m]] = [heap[m], heap[i]]; i = m; } }
+      return top; };
+    const gc = goal % cols, gr = Math.floor(goal / cols);
+    for (let d = 0; d < 4; d++) { cost[start * 4 + d] = 0; push(0, start * 4 + d); }
+    while (heap.length) {
+      const [, state] = pop();
+      const index = state >> 2, dir = state & 3;
+      if (index === goal) {
+        const cells = [];
+        for (let s = state; s >= 0; s = from[s]) cells.push(s >> 2);
+        return cells.reverse();
+      }
+      const col = index % cols, row = Math.floor(index / cols);
+      for (let d = 0; d < 4; d++) {
+        if (d === (dir + 2) % 4) continue;
+        const nc = col + DX[d], nr = row + DY[d];
+        if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
+        const next = nr * cols + nc;
+        const step = 1 + usage[next] * .6 + (d !== dir ? 3 : 0) + (blocked[next] && next !== goal ? 60 : 0);
+        const ns = next * 4 + d, nextCost = cost[state] + step;
+        if (nextCost >= cost[ns]) continue;
+        cost[ns] = nextCost;
+        from[ns] = state;
+        push(nextCost + Math.abs(nc - gc) + Math.abs(nr - gr), ns);
+      }
+    }
+    return [start, goal];
+  }
+
+  ROUTE.paths = sim.hoses.map(([a, b]) => {
+    const A = portAnchor(a), B = portAnchor(b);
+    const cells = search(toCell(A.exit), toCell(B.exit));
+    for (const index of cells) usage[index] += 1;   // spread later hoses beside earlier ones
+    // Keep only corner cells, then join to the fittings.
+    const corners = cells.filter((index, i) => i === 0 || i === cells.length - 1 ||
+      (cells[i - 1] - index) !== (index - cells[i + 1]));
+    const points = corners.map(center).slice(1, -1);
+    return {a, b, points:[A.port, A.exit, ...points, B.exit, B.port]};
+  });
+}
+
+// Board-plane point (physical units) -> viewport pixels.
+function boardProjector(origin) {
+  const A = [], b = [];
+  cornerRefs.forEach((ref, index) => {
+    const box = ref.getBoundingClientRect();
+    const sx = box.left + box.width / 2 - origin.left, sy = box.top + box.height / 2 - origin.top;
+    const u = index % 2 * 100, v = (index > 1 ? 100 : -layout.extra) * PHYS;
+    A.push([u, v, 1, 0, 0, 0, -sx * u, -sx * v]); b.push(sx);
+    A.push([0, 0, 0, u, v, 1, -sy * u, -sy * v]); b.push(sy);
+  });
+  const h = solveLinear(A, b);
+  return ([u, v]) => { const w = h[6] * u + h[7] * v + 1; return [(h[0] * u + h[1] * v + h[2]) / w, (h[3] * u + h[4] * v + h[5]) / w]; };
+}
+
+// Polyline with rounded corners.
+function roundedPath(points) {
+  const pts = points.filter((p, i) => i === 0 || Math.hypot(p[0] - points[i - 1][0], p[1] - points[i - 1][1]) > .5);
+  let d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1], [x, y] = pts[i], [nx, ny] = pts[i + 1];
+    const l1 = Math.hypot(x - px, y - py), l2 = Math.hypot(nx - x, ny - y);
+    const r = Math.min(9, l1 / 2, l2 / 2);
+    const ax = x + (px - x) / l1 * r, ay = y + (py - y) / l1 * r;
+    const bx = x + (nx - x) / l2 * r, by = y + (ny - y) / l2 * r;
+    d += ' L' + ax.toFixed(1) + ' ' + ay.toFixed(1) + ' Q' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ' + bx.toFixed(1) + ' ' + by.toFixed(1);
+  }
+  const last = pts[pts.length - 1];
+  return d + ' L' + last[0].toFixed(1) + ' ' + last[1].toFixed(1);
+}
+
+function drawHoses() {
+  const origin = viewport.getBoundingClientRect();
+  // Re-route when hoses or device positions change (throttled while dragging).
+  const key = JSON.stringify(sim.hoses) + '|' + layout.extra + '|' + instances.map(inst => inst.id + '@' + inst.left.toFixed(1) + ',' + inst.top.toFixed(1)).join(';');
+  const now = performance.now();
+  if (key !== ROUTE.key && (now - ROUTE.at > 90 || ROUTE.paths.length !== sim.hoses.length)) {
+    ROUTE.key = key;
+    ROUTE.at = now;
+    routeHoses();
+  }
+  const project = boardProjector(origin);
+  let markup = '';
+  sim.hoses.forEach(([a, b], index) => {
+    const route = ROUTE.paths[index];
+    if (!route || route.a !== a || route.b !== b) return;
+    const screen = route.points.map(project);
+    screen[0] = Object.values(portCenter(a, origin));
+    screen[screen.length - 1] = Object.values(portCenter(b, origin));
+    const d = roundedPath(screen);
+    const live = sim.p(a) > 0;
+    // A wide translucent stroke makes the glow; an SVG filter would repaint slowly on every camera move.
+    markup += (live ? '<path d="' + d + '" stroke="#38e8ff40" stroke-width="10"/>' : '') +
+      '<path class="hose-hit" data-hose="' + index + '" d="' + d + '"/>' +
+      '<path class="hose-body" d="' + d + '" stroke="' + (live ? '#1fd8ff' : '#2b74cf') + '" stroke-width="' + (live ? 4.5 : 4) + '"/>' +
+      '<path d="' + d + '" stroke="#ffffff55" stroke-width="1.2" transform="translate(-1 -1)"/>';
+  });
+  if (sim.pending && sim.cursor) {
+    const a = portCenter(sim.pending, origin);
+    markup += '<path d="M' + a.x + ' ' + a.y + ' L' + sim.cursor.x + ' ' + sim.cursor.y + '" stroke="#ffc94a" stroke-width="2.5" stroke-dasharray="6 5"/>';
+  }
+  if (markup !== hoseLayer.dataset.markup) {
+    hoseLayer.innerHTML = markup;
+    hoseLayer.dataset.markup = markup;
+  }
+}
+
+const fmt = bar => bar.toFixed(1) + ' bar';
+function liveText(inst) {
+  const names = inst.comp.portNames ?? [];
+  const ports = names.map((name, index) => name &&
+    'พอร์ต ' + (inst.comp.portLabels?.[index] ?? name) + ': ' + fmt(sim.p(inst.id + ':' + name))).filter(Boolean).join('\n');
+  let state = '';
+  switch (inst.logic) {
+    case 'hand': state = inst.on ? 'เปิด · จ่ายลม ' + fmt(sim.supply) + ' เข้าแผง' : 'ปิด · ระบายลมด้านแผงทิ้ง (คลิกเพื่อเปิด)'; break;
+    case 'manifold':
+      state = inst.added ? 'บล็อกเสริม · ทุกพอร์ตเชื่อมถึงกัน ต่อสายจากบล็อกหลักเข้าพอร์ตใดก็ได้' : (hand.on ? 'มีลมจ่าย' : 'ไม่มีลม · วาล์วหลักปิด'); break;
+    case 'gauge': { const bar = hand.on ? sim.supply : 0; state = 'อ่านค่า ' + (bar / 10).toFixed(2) + ' MPa (' + fmt(bar) + ')'; break; }
+    case 'v32': case 'selector': case 'push': case 'roller':
+      state = inst.on ? 'สลับแล้ว · 1 → 2 ลมผ่าน' : 'ตำแหน่งปกติ · 2 ระบายลม';
+      if (inst.logic === 'roller') {
+        const sensing = rollerSensing(inst);
+        state += '\n' + (sensing ? 'ก้านสูบ ' + cylinderName(sensing.cyl) + ' กดลูกกลิ้งที่ระยะชัก ' + Math.round(sensing.at * 100) + '%' +
+          (inst.contact ? ' · ตอนนี้ถูกก้านกดอยู่' : '') : 'ไม่มีก้านสูบผ่าน · ลากไปวางใต้ปลายก้านสูบ (จะดูดเข้าตำแหน่งเอง)');
+      }
+      break;
+    case 'v52s': case 'v52d':
+      state = inst.on ? 'ตำแหน่ง 14 · 1 → 4, 2 ระบาย' : 'ตำแหน่ง 12 · 1 → 2, 4 ระบาย'; break;
+    case 'timer':
+      state = inst.on ? 'ครบเวลา · 1 → 2 ลมผ่าน' : inst.timerStart !== null ?
+        'กำลังหน่วง ' + ((performance.now() - inst.timerStart) / 1000).toFixed(1) + ' / ' + sim.delay + ' วินาที' : 'รอสัญญาณที่พอร์ต 12'; break;
+    case 'cylS': case 'cylD':
+      state = 'ระยะชัก ' + Math.round(inst.stroke * 100) + '% · แรงสุทธิ ' + inst.force.toFixed(0) + ' N' +
+        (Math.abs(inst.force) > FRICTION && inst.stroke > 0 && inst.stroke < 1 ? ' · ความเร็ว ' + Math.round((inst.flowScale ?? 1) * 100) + '%' : ''); break;
+    case 'tee': state = 'ทั้งสามทางเชื่อมถึงกัน'; break;
+    case 'flow':
+      state = 'เปิดรูหรี่ ' + Math.round(inst.setting * 100) + '% (ทิศ 1 → 2) · ทิศ 2 → 1 ไหลเต็มที่'; break;
+  }
+  return state + (ports ? '\n' + ports : '');
+}
+
+// ---------------------------------------------------------------------------
+// Sound: everything is synthesized with Web Audio (no audio files).
+// The context starts on the first user gesture, as browsers require.
+// ---------------------------------------------------------------------------
+const sound = {ctx:null, master:null, noise:null, loops:{}, enabled:true, volume:.7, lastHiss:0};
+try {
+  const saved = JSON.parse(localStorage.getItem('pneumatic-sound-v1') ?? 'null');
+  if (saved) { sound.enabled = !!saved.enabled; sound.volume = Number(saved.volume) || 0; }
+} catch {}
+
+function startAudio() {
+  if (!sound.ctx) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const master = ctx.createGain();
+      master.gain.value = sound.enabled ? sound.volume : 0;
+      master.connect(ctx.destination);
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      Object.assign(sound, {ctx, master, noise:buffer});
+    } catch { return; }
+  }
+  if (sound.ctx.state === 'suspended') sound.ctx.resume();
+}
+const audio = () => sound.ctx && sound.enabled && sound.ctx.state === 'running' ? sound.ctx : null;
+
+function noiseBurst(ctx, filters, level, attack, decay, when = ctx.currentTime) {
+  const source = ctx.createBufferSource();
+  source.buffer = sound.noise;
+  source.loopStart = 0;
+  let node = source;
+  for (const [type, frequency, q] of filters) {
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = frequency;
+    filter.Q.value = q;
+    node.connect(filter);
+    node = filter;
+  }
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, when);
+  gain.gain.exponentialRampToValueAtTime(level, when + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, when + attack + decay);
+  node.connect(gain).connect(sound.master);
+  source.start(when, Math.random() * 1.5);
+  source.stop(when + attack + decay + .05);
+}
+
+function tone(ctx, from, to, level, decay, type = 'sine') {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const t = ctx.currentTime;
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + decay);
+  gain.gain.setValueAtTime(level, t);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+  osc.connect(gain).connect(sound.master);
+  osc.start(t);
+  osc.stop(t + decay + .02);
+}
+
+// Spool valve shifting: sharp metallic click with a short body.
+function playClick(pitch = 1, level = .5) {
+  const ctx = audio(); if (!ctx) return;
+  noiseBurst(ctx, [['bandpass', 3200 * pitch, 2.5]], level, .001, .035);
+  tone(ctx, 420 * pitch, 160 * pitch, level * .35, .05, 'triangle');
+}
+// Air escaping from an exhaust silencer.
+function playHiss(level = .4, duration = .45, color = 1) {
+  const ctx = audio(); if (!ctx) return;
+  const now = ctx.currentTime;
+  if (now - sound.lastHiss < .05) return;
+  sound.lastHiss = now;
+  noiseBurst(ctx, [['highpass', 1800 * color, .7], ['bandpass', 5200 * color, .6]], level, .012, duration);
+}
+// Piston hitting the end cap.
+function playThunk(level = .6) {
+  const ctx = audio(); if (!ctx) return;
+  tone(ctx, 110, 45, level, .16);
+  noiseBurst(ctx, [['lowpass', 900, .8]], level * .5, .002, .07);
+}
+
+// Continuous noise beds (air flowing into a moving cylinder, leaks).
+function loopLevel(name, filters, target) {
+  const ctx = audio();
+  if (!ctx) { if (sound.loops[name]) sound.loops[name].gain.gain.value = 0; return; }
+  let loop = sound.loops[name];
+  if (!loop) {
+    const source = ctx.createBufferSource();
+    source.buffer = sound.noise;
+    source.loop = true;
+    let node = source;
+    for (const [type, frequency, q] of filters) {
+      const filter = ctx.createBiquadFilter();
+      Object.assign(filter, {type});
+      filter.frequency.value = frequency;
+      filter.Q.value = q;
+      node.connect(filter);
+      node = filter;
+    }
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    node.connect(gain).connect(sound.master);
+    source.start();
+    loop = sound.loops[name] = {gain};
+  }
+  loop.gain.gain.setTargetAtTime(target, ctx.currentTime, .04);
+}
+
+const VALVE_PITCH = {v32:1, v52s:.85, v52d:.8, timer:1.1, push:1.35, roller:1.25, selector:.7, hand:.6};
+function playSounds(vented, ventedCylinder, filled) {
+  for (const inst of instances) {
+    if (inst.soundOn !== undefined && inst.soundOn !== inst.on && VALVE_PITCH[inst.logic]) {
+      playClick(VALVE_PITCH[inst.logic], inst.logic === 'hand' || inst.logic === 'selector' ? .4 : .5);
+    }
+    inst.soundOn = inst.on;
+    if (inst.logic === 'cylS' || inst.logic === 'cylD') {
+      const prev = inst.soundStroke ?? inst.stroke;
+      if ((prev < 1 && inst.stroke >= 1) || (prev > 0 && inst.stroke <= 0)) playThunk(.55);
+      inst.speed = Math.abs(inst.stroke - prev);
+      inst.soundStroke = inst.stroke;
+    }
+  }
+  if (vented) playHiss(Math.min(.55, .2 + vented * .07), ventedCylinder ? .75 : .35);
+  else if (filled) playHiss(Math.min(.18, .06 + filled * .02), .18, .7);
+  const moving = instances.reduce((sum, inst) => sum + (inst.speed ?? 0), 0);
+  loopLevel('flow', [['bandpass', 1400, .8]], Math.min(.12, moving * 4));
+  loopLevel('leak', [['highpass', 3000, .7]], sim.leaks ? .18 : 0);
+}
+
+let lastLive = '', lastStatus = '';
+function render() {
+  for (const inst of instances) {
+    inst.button.classList.toggle('on', inst.on);
+    if (isCylinder(inst)) {
+      const stroke = inst.stroke.toFixed(4);
+      if (inst.drawnStroke !== stroke) { inst.button.style.setProperty('--stroke', stroke); inst.drawnStroke = stroke; }
+    }
+  }
+  let vented = 0, filled = 0, ventedCylinder = false;
+  const leaking = new Set(sim.leakPorts);
+  for (const [id, hit] of portHits) {
+    const was = hit.classList.contains('live');
+    const live = sim.p(id) > 0;
+    if (was && !live) { vented++; if (/^(9|10)\./.test(id)) ventedCylinder = true; }
+    if (!was && live) filled++;
+    hit.classList.toggle('live', live);
+    hit.classList.toggle('pending', id === sim.pending);
+    hit.classList.toggle('plugged', sim.plugs.has(id));
+    hit.classList.toggle('leaking', leaking.has(id));
+  }
+  playSounds(vented, ventedCylinder, filled);
+  gaugeNeedle.style.setProperty('--needle', (-135 + 27 * (hand.on ? sim.supply : 0)) + 'deg');
+  drawHoses();
+  const selected = instances.find(inst => inst.id === sim.selected);
+  const live = selected ? liveText(selected) : '';
+  if (live !== lastLive) liveField.textContent = lastLive = live;
+  let status = 'ลมหลัก ' + (hand.on ? 'เปิด ' + fmt(sim.supply) : 'ปิด') + ' · สายลม ' + sim.hoses.length + ' เส้น';
+  if (sim.pending) status = 'เลือกพอร์ตปลายทาง…';
+  if (sim.plugMode) status = 'โหมดจุกปิด · คลิกพอร์ตเพื่ออุดหรือถอดจุก';
+  if (sim.notice && performance.now() < sim.notice.until) status = sim.notice.text;
+  if (sim.leakPorts.length) {
+    status += ' · ⚠ ลมรั่วที่' + describePort(sim.leakPorts[0]) + (sim.leakPorts.length > 1 ? ' และอีก ' + (sim.leakPorts.length - 1) + ' จุด' : '') +
+      ' (คลิกขวาที่พอร์ตเพื่ออุดจุก)';
+  } else if (sim.leaks) status += ' · ⚠ ลมรั่วออกทางระบาย';
+  if (status !== lastStatus) {
+    statusField.textContent = lastStatus = status;
+    statusField.classList.toggle('warn', sim.leaks);
+  }
+}
+
+let lastFrame = performance.now();
+function frame(now) {
+  // Sub-step so slow or throttled frames still run the circuit in real time.
+  let remaining = Math.min(.5, (now - lastFrame) / 1000);
+  const start = lastFrame;
+  lastFrame = now;
+  do {
+    const dt = Math.min(.02, remaining);
+    remaining -= dt;
+    moveCylinders(dt);
+    const t = now - remaining * 1000;
+    for (let pass = 0; pass < 12; pass++) {
+      solvePressure();
+      if (!updateStates(Math.max(start, t))) break;
+    }
+  } while (remaining > 1e-6);
+  render();
+  requestAnimationFrame(frame);
+}
+
+const PLUGS_KEY = 'pneumatic-plugs-v1';
+function saveHoses() {
+  if (!PERSIST) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sim.hoses));
+    localStorage.setItem(PLUGS_KEY, JSON.stringify([...sim.plugs]));
+  } catch {}
+}
+function loadHoses() {
+  if (!PERSIST) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    sim.hoses = saved.filter(pair => Array.isArray(pair) && portHits.has(pair[0]) && portHits.has(pair[1]));
+    sim.plugs = new Set(JSON.parse(localStorage.getItem(PLUGS_KEY) ?? '[]').filter(id => portHits.has(id)));
+  } catch { sim.hoses = []; }
+}
+
+// "5/2 Double #3 พอร์ต 4" style name for status messages.
+function describePort(id) {
+  const inst = instById(portGeo.get(id).instId);
+  const label = portHits.get(id).textContent;
+  return ' ' + inst.button.querySelector('.caption').textContent + (label ? ' พอร์ต ' + label : '');
+}
+
+// A plug closes one port. A port with a hose cannot take a plug.
+function togglePlug(id) {
+  if (!sim.plugs.has(id) && sim.hoses.some(pair => pair.includes(id))) {
+    flash('พอร์ตนี้มีสายต่ออยู่ · ถอดสายก่อนจึงจะอุดจุกได้');
+    return;
+  }
+  remember();
+  if (sim.plugs.delete(id)) flash('ถอดจุกที่' + describePort(id));
+  else { sim.plugs.add(id); flash('อุดจุกที่' + describePort(id)); }
+  logEvent(sim.plugs.has(id) ? 'plug' : 'unplug', id);
+  if (sim.pending === id) sim.pending = null;
+  playClick(sim.plugs.has(id) ? 1.5 : 1.1, .3);
+  saveHoses();
+}
+
+// Short message in the status field (e.g. after removing or undoing).
+function flash(text) { sim.notice = {text, until:performance.now() + 2500}; }
+
+function clickPort(id) {
+  if (sim.plugMode) { togglePlug(id); return; }
+  if (sim.plugs.has(id)) { flash('พอร์ตนี้อุดจุกอยู่ · คลิกขวาเพื่อถอดจุกก่อนต่อสาย'); return; }
+  if (!sim.pending) { sim.pending = id; return; }
+  if (sim.pending === id) { sim.pending = null; return; }
+  const a = sim.pending;
+  sim.pending = null;
+  remember();
+  const existing = sim.hoses.findIndex(([x, y]) => (x === a && y === id) || (x === id && y === a));
+  if (existing >= 0) sim.hoses.splice(existing, 1);
+  else sim.hoses.push([a, id]);
+  logEvent(existing >= 0 ? 'unhose' : 'hose', [a, id]);
+  playClick(existing >= 0 ? 1.1 : 1.7, .3);   // push-in fitting snap
+  saveHoses();
+}
+
+let heldPart = null;
+const releaseHeld = () => { if (heldPart) { heldPart.manual = false; heldPart = null; } };
+viewport.addEventListener('pointerdown', event => {
+  if (event.button === 2 && event.target.closest('.port-hit')) {   // right-click a port: plug / unplug
+    event.stopPropagation();
+    event.preventDefault();
+    togglePlug(event.target.closest('.port-hit').dataset.port);
+    return;
+  }
+  if (event.button !== 0) return;
+  let port = event.target.closest('.port-hit');
+  const hose = event.target.closest('.hose-hit');
+  if (hose && !port) {
+    port = document.elementsFromPoint(event.clientX, event.clientY).find(el => el.classList?.contains('port-hit'));
+    if (!port) {
+      event.stopPropagation();
+      event.preventDefault();
+      remember();
+      logEvent('unhose', sim.hoses.splice(Number(hose.dataset.hose), 1)[0]);
+      flash('ถอดสายแล้ว · กด Ctrl+Z เพื่อเลิกทำ');
+      playClick(1.1, .3);
+      saveHoses();
+      return;
+    }
+  }
+  if (port) {
+    event.stopPropagation();
+    event.preventDefault();
+    clickPort(port.dataset.port);
+    return;
+  }
+  const part = event.target.closest('.part.push, .part.roller');
+  if (part && !event.ctrlKey && !event.shiftKey) {
+    event.stopPropagation();
+    heldPart = instanceByButton.get(part);
+    heldPart.manual = true;
+  }
+}, true);
+window.addEventListener('pointerup', releaseHeld);
+window.addEventListener('pointercancel', releaseHeld);
+window.addEventListener('blur', releaseHeld);
+viewport.addEventListener('pointermove', event => {
+  const box = viewport.getBoundingClientRect();
+  sim.cursor = {x:event.clientX - box.left, y:event.clientY - box.top};
+});
+window.addEventListener('keydown', event => { if (event.key === 'Escape') sim.pending = null; });
+
+supplyInput.addEventListener('input', () => {
+  const value = parseFloat(supplyInput.value);
+  if (Number.isFinite(value)) sim.supply = Math.min(10, Math.max(0, value));
+});
+delayInput.addEventListener('input', () => {
+  const value = parseFloat(delayInput.value);
+  if (Number.isFinite(value)) sim.delay = Math.min(60, Math.max(0, value));
+});
+const plugButton = document.querySelector('#plug-mode');
+plugButton.addEventListener('click', () => {
+  sim.plugMode = !sim.plugMode;
+  sim.pending = null;
+  plugButton.setAttribute('aria-pressed', sim.plugMode);
+  viewport.classList.toggle('plugging', sim.plugMode);
+});
+const realisticBox = document.querySelector('#realistic');
+try { const saved = localStorage.getItem('pneumatic-realistic-v1'); if (saved !== null) sim.realistic = saved === '1'; } catch {}
+realisticBox.checked = sim.realistic;
+realisticBox.addEventListener('change', () => {
+  sim.realistic = realisticBox.checked;
+  try { localStorage.setItem('pneumatic-realistic-v1', sim.realistic ? '1' : '0'); } catch {}
+});
+
+document.querySelector('#clear-hoses').addEventListener('click', () => {
+  if (!sim.hoses.length) return;
+  remember();
+  flash('ถอดสายทั้งหมดแล้ว · กด Ctrl+Z เพื่อเลิกทำ');
+  logEvent('clear', sim.hoses.length);
+  sim.hoses = [];
+  sim.pending = null;
+  saveHoses();
+});
+
+// ---------------------------------------------------------------------------
+// Extra devices: add more valves, buttons, timers or cylinders, drag them
+// around the board, and remove them again.
+// ---------------------------------------------------------------------------
+const ADDABLE = [5, 4, 3, 7, 6, 8, 11, 12, 13, 2, 10, 9];   // component indexes, 5/2 double first
+const ADDED_KEY = 'pneumatic-added-v1';
+const addType = document.querySelector('#add-type');
+const removeButton = document.querySelector('#remove-part');
+for (const index of ADDABLE) addType.add(new Option(components[index].name + ' (' + components[index].short + ')', index));
+
+const cornerRefs = [[0, 0], [100, 0], [0, 100], [100, 100]].map(([x, y]) => {
+  const ref = document.createElement('span');
+  ref.className = 'corner-ref';
+  ref.style.cssText = 'left:' + x + '%;top:' + y + '%';
+  board.append(ref);
+  return ref;
+});
+
+function solveLinear(A, b) {
+  const n = b.length;
+  const m = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < n; row++) if (Math.abs(m[row][col]) > Math.abs(m[pivot][col])) pivot = row;
+    [m[col], m[pivot]] = [m[pivot], m[col]];
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = m[row][col] / m[col][col];
+      for (let k = col; k <= n; k++) m[row][k] -= factor * m[col][k];
+    }
+  }
+  return m.map((row, i) => row[n] / row[i]);
+}
+
+// Map a screen point onto the board plane (percent coordinates) through the
+// perspective homography given by the board's four projected corners.
+function screenToBoard(x, y) {
+  const A = [], b = [];
+  cornerRefs.forEach((ref, index) => {
+    const box = ref.getBoundingClientRect();
+    const sx = box.left + box.width / 2, sy = box.top + box.height / 2;
+    const u = index % 2 * 100, v = index > 1 ? 100 : -layout.extra;
+    A.push([sx, sy, 1, 0, 0, 0, -u * sx, -u * sy]); b.push(u);
+    A.push([0, 0, 0, sx, sy, 1, -v * sx, -v * sy]); b.push(v);
+  });
+  const h = solveLinear(A, b);
+  const w = h[6] * x + h[7] * y + 1;
+  return [(h[0] * x + h[1] * y + h[2]) / w, (h[3] * x + h[4] * y + h[5]) / w];
+}
+
+function findSpot(width, height) {
+  // Cylinders keep the strip under their rod free for roller valves.
+  const overlaps = (x, y) => instances.some(inst => {
+    const w = inst.width + (isCylinder(inst) ? 18 : 0), h = inst.height + (isCylinder(inst) ? 10 : 0);
+    return x < inst.left + w + 2 && x + width + 2 > inst.left && y < inst.top + h + 3 && y + height + 3 > inst.top;
+  });
+  for (let y = 3 - layout.extra; y <= 97 - height; y += 2) {
+    for (let x = 16; x <= 98 - width; x += 2) if (!overlaps(x, y)) return [x, y];
+  }
+  return null;
+}
+// Find room for a new part; when the board is full, extend it upward.
+function freeSpot(width, height) {
+  let spot = findSpot(width, height);
+  while (!spot && layout.extra < 400) {
+    setExtra(layout.extra + Math.ceil((height + 6) / 5) * 5);
+    spot = findSpot(width, height);
+  }
+  return spot ?? [40, 3 - layout.extra];
+}
+const neededExtra = () => Math.max(0, ...instances.filter(inst => inst.added).map(inst => Math.ceil(3 - inst.top)));
+function setExtra(extra) {
+  layout.extra = Math.max(neededExtra(), Math.round(extra));
+  layoutBoard();
+}
+
+function saveAdded() {
+  const parts = instances.filter(inst => inst.added).map(inst => ({ci:inst.ci, ii:inst.ii,
+    left:+inst.left.toFixed(2), top:+inst.top.toFixed(2)}));
+  const settings = Object.fromEntries(instances.filter(inst => inst.setting !== undefined || inst.meter)
+    .map(inst => [inst.id, {setting:inst.setting, meter:inst.meter}]));
+  if (!PERSIST) return;
+  try { localStorage.setItem(ADDED_KEY, JSON.stringify({extra:layout.extra, parts, settings})); } catch {}
+}
+
+// A new roller goes to the first free cylinder end (retracted, then extended).
+function rollerSpot(width, height) {
+  const blocked = (x, y) => instances.some(inst => !isCylinder(inst) &&
+    x < inst.left + inst.width + .5 && x + width + .5 > inst.left && y < inst.top + inst.height + .5 && y + height + .5 > inst.top);
+  return rollerSnaps(width).find(([x, y]) => x >= 0 && x + width <= 100 && y + height <= 100 && !blocked(x, y));
+}
+
+function addPart(componentIndex, instanceIndex, left, top) {
+  const component = components[componentIndex];
+  const [width, height] = component.size ?? component.positions[0].slice(2);
+  if (instanceIndex === undefined) {
+    instanceIndex = Math.max(-1, ...instances.filter(inst => inst.ci === componentIndex).map(inst => inst.ii)) + 1;
+  }
+  if (left === undefined && components[componentIndex].logic === 'roller') [left, top] = rollerSpot(width, height) ?? [];
+  // A cylinder reserves the strip under its rod for roller valves at both stroke ends.
+  if (left === undefined && /^cyl/.test(components[componentIndex].logic)) [left, top] = freeSpot(width + 18, height + 10);
+  if (left === undefined) [left, top] = freeSpot(width, height);
+  return buildPart(componentIndex, instanceIndex, [left, top, width, height], true);
+}
+
+function removePart(inst) {
+  const prefix = inst.id + ':';
+  inst.button.remove();
+  instances.splice(instances.indexOf(inst), 1);
+  instanceByButton.delete(inst.button);
+  partButtons.splice(partButtons.findIndex(entry => entry.button === inst.button), 1);
+  for (const id of [...portHits.keys()]) if (id.startsWith(prefix)) { portHits.delete(id); portGeo.delete(id); sim.plugs.delete(id); }
+  sim.hoses = sim.hoses.filter(([a, b]) => !a.startsWith(prefix) && !b.startsWith(prefix));
+  if (sim.pending?.startsWith(prefix)) sim.pending = null;
+  itemCounts[inst.ci].textContent = instances.filter(other => other.ci === inst.ci).length;
+  updateCaptions();
+  saveAdded();
+  saveHoses();
+  select(inst.ci);
+}
+
+// Adjustable flow settings: a flow control valve's opening, and the two
+// built-in meter-out flow controls on each double-acting cylinder (spec 2.3).
+const settingsPanel = document.querySelector('#settings');
+function showSettings(inst) {
+  settingsPanel.replaceChildren();
+  const sliders = inst?.logic === 'flow' ? [['setting', null, 'เปิดรูหรี่ (ทิศ 1 → 2)']] :
+    inst?.logic === 'cylD' ? [['meter', 'B', 'ความเร็วยืด (หรี่ลมออกด้าน −)'], ['meter', 'A', 'ความเร็วหด (หรี่ลมออกด้าน +)']] : [];
+  for (const [field, key, text] of sliders) {
+    const label = document.createElement('label');
+    const value = () => key ? inst[field][key] : inst[field];
+    label.innerHTML = '<span></span><output></output><input type="range" min="5" max="100" step="5">';
+    label.querySelector('span').textContent = text;
+    const input = label.querySelector('input'), output = label.querySelector('output');
+    input.value = Math.round(value() * 100);
+    output.textContent = input.value + '%';
+    input.addEventListener('input', () => {
+      const next = Number(input.value) / 100;
+      if (key) inst[field][key] = next; else inst[field] = next;
+      output.textContent = input.value + '%';
+      updateCaptions();
+    });
+    input.addEventListener('change', () => { saveAdded(); logEvent('setting', [inst.id, field, key, Number(input.value)]); });
+    settingsPanel.append(label);
+  }
+}
+
+document.querySelector('#extend-board').addEventListener('click', () => { remember(); setExtra(layout.extra + 20); saveAdded(); logEvent('board', layout.extra); });
+document.querySelector('#fit-board').addEventListener('click', () => { remember(); setExtra(0); saveAdded(); });
+
+document.querySelector('#add-part').addEventListener('click', () => {
+  remember();
+  const inst = addPart(Number(addType.value));
+  logEvent('add', [inst.id, Math.round(inst.left * 100) / 100, Math.round(inst.top * 100) / 100]);
+  saveAdded();
+  select(inst.ci, inst.ii);
+  playClick(.9, .35);
+});
+function removeSelected() {
+  const inst = instances.find(other => other.id === sim.selected);
+  if (!inst) return;
+  if (!inst.added) { flash('อุปกรณ์เดิมบนแผงลบไม่ได้ · ลบได้เฉพาะอุปกรณ์ที่เพิ่มเอง'); return; }
+  remember();
+  removePart(inst);
+  logEvent('remove', inst.id);
+  playClick(.8, .35);
+  flash('ลบอุปกรณ์แล้ว · กด Ctrl+Z เพื่อเลิกทำ');
+}
+removeButton.addEventListener('click', removeSelected);
+// Delete (or Backspace) removes the selected added device, unless typing in a field.
+window.addEventListener('keydown', event => {
+  if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input, select, textarea')) return;
+  event.preventDefault();
+  removeSelected();
+});
+
+let moving = null;
+viewport.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || event.ctrlKey || event.shiftKey) return;
+  if (event.target.closest('.port-hit, .hose-hit')) return;
+  const part = event.target.closest('.part.added');
+  if (!part) return;
+  event.stopPropagation();
+  const inst = instanceByButton.get(part);
+  const [u, v] = screenToBoard(event.clientX, event.clientY);
+  moving = {inst, id:event.pointerId, x:event.clientX, y:event.clientY, du:u - inst.left, dv:v - inst.top, moved:false, before:snapshot()};
+  part.setPointerCapture(event.pointerId);
+  if (inst.logic === 'push') { heldPart = inst; inst.manual = true; }
+}, true);
+viewport.addEventListener('pointermove', event => {
+  if (moving?.id !== event.pointerId) return;
+  if (!moving.moved && Math.hypot(event.clientX - moving.x, event.clientY - moving.y) < 5) return;
+  moving.moved = true;
+  suppressClick = true;
+  releaseHeld();
+  const {inst} = moving;
+  const [u, v] = screenToBoard(event.clientX, event.clientY);
+  inst.left = Math.min(100 - inst.width, Math.max(0, u - moving.du));
+  inst.top = Math.min(100 - inst.height, Math.max(-layout.extra, v - moving.dv));
+  if (inst.logic === 'roller') {
+    // Snap onto a cylinder's rod line and onto its stroke ends when close.
+    for (const [x, y] of rollerSnaps(inst.width)) {
+      if (Math.abs(inst.top - y) > 2.5 || Math.abs(inst.left - x) > 30) continue;
+      inst.top = y;
+      if (Math.abs(inst.left - x) < 2) inst.left = x;
+    }
+  }
+  placePart(inst);
+  updateCaptions();
+});
+const endMove = event => {
+  if (moving?.id !== event.pointerId) return;
+  if (moving.moved) {
+    remember(moving.before);
+    saveAdded();
+    logEvent('move', [moving.inst.id, Math.round(moving.inst.left * 100) / 100, Math.round(moving.inst.top * 100) / 100]);
+  }
+  moving = null;
+};
+
+// ---------------------------------------------------------------------------
+// Undo / redo: snapshots of the hoses, the added devices and the board size.
+// ---------------------------------------------------------------------------
+const undoStack = {undo:[], redo:[]};
+const undoButton = document.querySelector('#undo');
+const redoButton = document.querySelector('#redo');
+function snapshot() {
+  return JSON.stringify({hoses:sim.hoses, plugs:[...sim.plugs], extra:layout.extra,
+    parts:instances.filter(inst => inst.added).map(inst => ({ci:inst.ci, ii:inst.ii, left:inst.left, top:inst.top}))});
+}
+function updateHistoryButtons() {
+  undoButton.disabled = !undoStack.undo.length;
+  redoButton.disabled = !undoStack.redo.length;
+}
+function remember(state = snapshot()) {
+  if (undoStack.undo[undoStack.undo.length - 1] === state) return;
+  undoStack.undo.push(state);
+  if (undoStack.undo.length > 200) undoStack.undo.shift();
+  undoStack.redo = [];
+  updateHistoryButtons();
+}
+function restore(state) {
+  const saved = JSON.parse(state);
+  const keep = new Set(saved.parts.map(part => part.ci + '.' + part.ii));
+  for (const inst of instances.filter(other => other.added && !keep.has(other.id))) removePart(inst);
+  for (const part of saved.parts) {
+    const existing = instById(part.ci + '.' + part.ii);
+    if (existing) { existing.left = part.left; existing.top = part.top; }
+    else addPart(part.ci, part.ii, part.left, part.top);
+  }
+  layout.extra = saved.extra;
+  layoutBoard();
+  sim.hoses = saved.hoses.filter(([a, b]) => portHits.has(a) && portHits.has(b));
+  sim.plugs = new Set((saved.plugs ?? []).filter(id => portHits.has(id)));
+  sim.pending = null;
+  updateCaptions();
+  saveAdded();
+  saveHoses();
+}
+function stepHistory(from, to, message) {
+  if (!from.length) return;
+  to.push(snapshot());
+  restore(from.pop());
+  logEvent(from === undoStack.undo ? 'undo' : 'redo');
+  updateHistoryButtons();
+  flash(message);
+  playClick(1.2, .25);
+}
+const undo = () => stepHistory(undoStack.undo, undoStack.redo, 'เลิกทำแล้ว');
+const redo = () => stepHistory(undoStack.redo, undoStack.undo, 'ทำซ้ำแล้ว');
+undoButton.addEventListener('click', undo);
+redoButton.addEventListener('click', redo);
+window.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey) || event.target.closest?.('input, select, textarea')) return;
+  const key = event.key.toLowerCase();
+  if (key === 'z' && !event.shiftKey) { event.preventDefault(); undo(); }
+  else if (key === 'y' || (key === 'z' && event.shiftKey)) { event.preventDefault(); redo(); }
+});
+updateHistoryButtons();
+window.addEventListener('pointerup', endMove);
+window.addEventListener('pointercancel', endMove);
+
+function loadAdded() {
+  if (!PERSIST) return;
+  try {
+    let saved = JSON.parse(localStorage.getItem(ADDED_KEY) ?? 'null');
+    if (Array.isArray(saved)) saved = {parts:saved};
+    if (!saved) return;
+    layout.extra = Math.max(0, Number(saved.extra) || 0);
+    layoutBoard();
+    for (const entry of saved.parts ?? []) {
+      if (!ADDABLE.includes(entry.ci) || instances.some(inst => inst.id === entry.ci + '.' + entry.ii)) continue;
+      addPart(entry.ci, entry.ii, Number(entry.left), Number(entry.top));
+    }
+    for (const [id, value] of Object.entries(saved.settings ?? {})) {
+      const inst = instById(id);
+      if (!inst) continue;
+      if (inst.setting !== undefined && Number.isFinite(value.setting)) inst.setting = value.setting;
+      if (inst.meter && value.meter) inst.meter = {A:Number(value.meter.A) || 1, B:Number(value.meter.B) || 1};
+    }
+    updateCaptions();
+  } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// Crop zoom: drag a box over the view and the camera zooms so it fills the view.
+// The listener sits on the viewer (an ancestor) in the capture phase so it
+// runs before the port, hose and drag handlers on the viewport.
+// ---------------------------------------------------------------------------
+const cropButton = document.querySelector('#crop-zoom');
+const crop = {active:false, start:null, box:null};
+function setCropMode(active) {
+  crop.active = active;
+  cropButton.setAttribute('aria-pressed', active);
+  viewport.classList.toggle('cropping', active);
+  if (!active && crop.box) { crop.box.remove(); crop.box = null; crop.start = null; }
+}
+cropButton.addEventListener('click', () => setCropMode(!crop.active));
+const viewer = document.querySelector('.viewer');
+viewer.addEventListener('pointerdown', event => {
+  if (!crop.active || !viewport.contains(event.target) || event.button !== 0) return;
+  event.stopPropagation();
+  event.preventDefault();
+  const box = viewport.getBoundingClientRect();
+  crop.start = [event.clientX - box.left, event.clientY - box.top];
+  crop.box = document.createElement('div');
+  crop.box.className = 'crop-box';
+  viewport.append(crop.box);
+  viewport.setPointerCapture(event.pointerId);
+}, true);
+viewer.addEventListener('pointermove', event => {
+  if (!crop.start) return;
+  event.stopPropagation();
+  const box = viewport.getBoundingClientRect();
+  const [x0, y0] = crop.start, x1 = event.clientX - box.left, y1 = event.clientY - box.top;
+  Object.assign(crop.box.style, {left:Math.min(x0, x1) + 'px', top:Math.min(y0, y1) + 'px',
+    width:Math.abs(x1 - x0) + 'px', height:Math.abs(y1 - y0) + 'px'});
+}, true);
+viewer.addEventListener('pointerup', event => {
+  if (!crop.start) return;
+  event.stopPropagation();
+  const box = viewport.getBoundingClientRect();
+  const [x0, y0] = crop.start, x1 = event.clientX - box.left, y1 = event.clientY - box.top;
+  const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0);
+  setCropMode(false);
+  suppressClick = true;
+  if (w < 12 || h < 12) return;
+  // Zoom about the box centre, then pan that centre to the middle of the view.
+  const cx = (x0 + x1) / 2 - box.width / 2, cy = (y0 + y1) / 2 - box.height / 2;
+  zoomAt(Math.min(box.width / w, box.height / h) * .95, cx, cy);
+  updateView({x:camera.x - cx, y:camera.y - cy});
+}, true);
+window.addEventListener('keydown', event => { if (event.key === 'Escape' && crop.active) setCropMode(false); });
+
+const soundButton = document.querySelector('#sound');
+const volumeInput = document.querySelector('#volume');
+function applySound() {
+  soundButton.textContent = sound.enabled ? '🔊 เสียงเปิด' : '🔇 เสียงปิด';
+  soundButton.setAttribute('aria-pressed', sound.enabled);
+  volumeInput.value = sound.volume;
+  if (sound.master) sound.master.gain.setTargetAtTime(sound.enabled ? sound.volume : 0, sound.ctx.currentTime, .03);
+  try { localStorage.setItem('pneumatic-sound-v1', JSON.stringify({enabled:sound.enabled, volume:sound.volume})); } catch {}
+}
+soundButton.addEventListener('click', () => { sound.enabled = !sound.enabled; startAudio(); applySound(); });
+volumeInput.addEventListener('input', () => { sound.volume = Number(volumeInput.value); applySound(); });
+for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, startAudio, {capture:true});
+applySound();
+
+// ---------------------------------------------------------------------------
+// Coursework files: the student's ID, a build log of every circuit edit, and a
+// signed export / import. The signature (HMAC-SHA256) catches files edited
+// outside the simulator; the log and author list show where a file came from.
+// The key is embedded in the page, so this deters casual tampering only.
+// ---------------------------------------------------------------------------
+const SHA_K = new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,
+  0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,
+  0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,
+  0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,
+  0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+function sha256(bytes) {
+  const total = ((bytes.length + 9 + 63) >> 6) << 6;
+  const buffer = new Uint8Array(total);
+  buffer.set(bytes);
+  buffer[bytes.length] = 0x80;
+  const view = new DataView(buffer.buffer);
+  view.setUint32(total - 4, (bytes.length * 8) >>> 0);
+  view.setUint32(total - 8, Math.floor(bytes.length / 0x20000000));
+  const H = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const W = new Uint32Array(64);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let offset = 0; offset < total; offset += 64) {
+    for (let i = 0; i < 16; i++) W[i] = view.getUint32(offset + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(W[i - 15], 7) ^ rotr(W[i - 15], 18) ^ (W[i - 15] >>> 3);
+      const s1 = rotr(W[i - 2], 17) ^ rotr(W[i - 2], 19) ^ (W[i - 2] >>> 10);
+      W[i] = W[i - 16] + s0 + W[i - 7] + s1;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + SHA_K[i] + W[i]) | 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
+  }
+  const out = new Uint8Array(32);
+  const outView = new DataView(out.buffer);
+  H.forEach((value, i) => outView.setUint32(i * 4, value));
+  return out;
+}
+function hmacHex(keyText, message) {
+  const encode = text => new TextEncoder().encode(text);
+  let key = encode(keyText);
+  if (key.length > 64) key = sha256(key);
+  const inner = new Uint8Array(64), outer = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) { inner[i] = (key[i] ?? 0) ^ 0x36; outer[i] = (key[i] ?? 0) ^ 0x5c; }
+  const body = encode(message);
+  const first = new Uint8Array(64 + body.length); first.set(inner); first.set(body, 64);
+  const second = new Uint8Array(96); second.set(outer); second.set(sha256(first), 64);
+  return [...sha256(second)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+const SIGN_KEY = ['KMUTNB', 'IE', 'pneu', '2571', 'q7Zt4vLx9R'].join(':');
+const signPayload = payload => hmacHex(SIGN_KEY, JSON.stringify(payload));
+function verifyFile(file) {
+  const {sig, ...payload} = file;
+  return typeof sig === 'string' && sig === signPayload(payload);
+}
+
+const WORK_KEY = 'pneumatic-work-v1', STUDENT_KEY = 'pneumatic-student-v1';
+const EDIT_TYPES = new Set(['hose', 'unhose', 'plug', 'unplug', 'add', 'remove', 'move', 'setting', 'board', 'clear', 'undo', 'redo']);
+const newWorkId = () => [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join('');
+let work = {workId:newWorkId(), created:Date.now(), authors:[], log:[], tainted:false};
+const studentId = document.querySelector('#student-id');
+const studentName = document.querySelector('#student-name');
+const workStatus = document.querySelector('#work-status');
+
+function saveWork() {
+  if (!PERSIST) return;
+  try {
+    localStorage.setItem(WORK_KEY, JSON.stringify(work));
+    localStorage.setItem(STUDENT_KEY, JSON.stringify({id:studentId.value.trim(), name:studentName.value.trim()}));
+  } catch {}
+}
+// Minutes of actual work: gaps between edits count up to five minutes each.
+function activeMinutes(log) {
+  let total = 0;
+  for (let i = 1; i < log.length; i++) total += Math.min(5 * 60000, Math.max(0, log[i][0] - log[i - 1][0]));
+  return Math.round(total / 60000);
+}
+function showWorkStatus() {
+  const edits = work.log.filter(entry => EDIT_TYPES.has(entry[1])).length;
+  workStatus.textContent = 'บันทึกการทำงาน ' + edits + ' ขั้นตอน · ' + activeMinutes(work.log) + ' นาที';
+}
+function logEvent(type, data) {
+  if (!PERSIST) return;
+  work.log.push(data === undefined ? [Date.now(), type] : [Date.now(), type, data]);
+  saveWork();
+  showWorkStatus();
+}
+
+function circuitData() {
+  const state = JSON.parse(snapshot());
+  const settings = Object.fromEntries(instances.filter(inst => inst.setting !== undefined || inst.meter)
+    .map(inst => [inst.id, {setting:inst.setting, meter:inst.meter}]));
+  return {parts:state.parts, hoses:state.hoses, plugs:state.plugs, extra:state.extra, settings,
+    supply:sim.supply, delay:sim.delay, realistic:sim.realistic};
+}
+function applyCircuit(circuit) {
+  restore(JSON.stringify({hoses:circuit.hoses ?? [], plugs:circuit.plugs ?? [], extra:circuit.extra ?? 0, parts:circuit.parts ?? []}));
+  for (const inst of instances) {
+    const value = circuit.settings?.[inst.id];
+    if (inst.logic === 'flow') inst.setting = Number(value?.setting) || .3;
+    if (inst.meter) inst.meter = {A:Number(value?.meter?.A) || 1, B:Number(value?.meter?.B) || 1};
+  }
+  sim.supply = Number(circuit.supply) || 5; supplyInput.value = sim.supply;
+  sim.delay = Number.isFinite(Number(circuit.delay)) ? Number(circuit.delay) : 3; delayInput.value = sim.delay;
+  sim.realistic = circuit.realistic !== false; realisticBox.checked = sim.realistic;
+  updateCaptions();
+  saveAdded();
+  saveHoses();
+}
+
+function exportWork() {
+  const id = studentId.value.trim(), name = studentName.value.trim();
+  if (!/^\d{6,15}$/.test(id)) { alert('กรุณากรอกรหัสนักศึกษา (ตัวเลข) ก่อนบันทึกไฟล์ส่งงาน'); studentId.focus(); return; }
+  if (!name) { alert('กรุณากรอกชื่อ–สกุลก่อนบันทึกไฟล์ส่งงาน'); studentName.focus(); return; }
+  if (work.authors[work.authors.length - 1]?.id !== id) work.authors.push({id, name, at:Date.now()});
+  logEvent('export');
+  const payload = {format:'pneumatic-circuit', version:1, student:{id, name}, workId:work.workId, created:work.created,
+    exported:Date.now(), authors:work.authors, tainted:work.tainted, circuit:circuitData(), log:work.log};
+  const file = {...payload, sig:signPayload(payload)};
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(file)], {type:'application/json'}));
+  link.download = id + '-pneumatic.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+  flash('บันทึกไฟล์ ' + link.download + ' แล้ว');
+}
+
+function hasWork() { return sim.hoses.length > 0 || instances.some(inst => inst.added) || sim.plugs.size > 0; }
+
+function importWork(text, fileName) {
+  let file;
+  try { file = JSON.parse(text); } catch { alert('เปิดไฟล์ไม่ได้: ไม่ใช่ไฟล์งานของแบบจำลองนี้'); return; }
+  if (file?.format !== 'pneumatic-circuit' || !file.circuit) { alert('เปิดไฟล์ไม่ได้: ไม่ใช่ไฟล์งานของแบบจำลองนี้'); return; }
+  const signed = verifyFile(file);
+  if (!signed && !confirm('ไฟล์นี้ถูกแก้ไขจากภายนอกแบบจำลอง (ลายเซ็นไม่ตรง)\nถ้าเปิดต่อ ไฟล์ที่บันทึกต่อจากนี้จะถูกทำเครื่องหมายไว้ ต้องการเปิดต่อหรือไม่?')) return;
+  if (hasWork() && !confirm('เปิดไฟล์ "' + fileName + '" แทนงานที่อยู่บนแผงตอนนี้หรือไม่?')) return;
+  remember();
+  applyCircuit(file.circuit);
+  work = {workId:file.workId ?? newWorkId(), created:file.created ?? Date.now(), authors:Array.isArray(file.authors) ? file.authors : [],
+    log:Array.isArray(file.log) ? file.log : [], tainted:!!file.tainted || !signed};
+  logEvent('import', {from:file.student?.id ?? '', signed});
+  flash('เปิดไฟล์งานของ ' + (file.student?.id ?? '?') + ' แล้ว');
+}
+
+function newWork() {
+  if (hasWork() && !confirm('เริ่มงานใหม่จะล้างอุปกรณ์ที่เพิ่ม สายลม และจุกปิดทั้งหมด รวมถึงบันทึกการทำงาน\n(กด Ctrl+Z เพื่อเอาวงจรกลับได้ แต่บันทึกการทำงานจะเริ่มใหม่) ต้องการเริ่มใหม่หรือไม่?')) return;
+  remember();
+  applyCircuit({});
+  work = {workId:newWorkId(), created:Date.now(), authors:[], log:[], tainted:false};
+  logEvent('new');
+  flash('เริ่มงานใหม่แล้ว');
+}
+
+// Headless check used by the teacher page: reset, press the start input, and
+// record the order in which the named cylinders reach their stroke ends.
+function runCircuitTest(spec) {
+  const dt = .01;
+  let t = 0;
+  for (const inst of instances) Object.assign(inst, {on:false, manual:false, stroke:0, timerStart:null, contact:false});
+  hand.on = true;
+  const step = () => {
+    moveCylinders(dt);
+    for (let pass = 0; pass < 12; pass++) { solvePressure(); if (!updateStates(t * 1000)) break; }
+    t += dt;
+  };
+  const cylinders = new Map(instances.filter(isCylinder).map(cyl => [cylinderName(cyl), cyl]));
+  const letters = Object.entries(spec.map ?? {}).filter(([, name]) => cylinders.has(name));
+  const ends = new Map(letters.map(([letter]) => [letter, 'in']));
+  const moves = [];
+  let leakPeak = 0;
+  const watch = phase => {
+    for (const [letter, name] of letters) {
+      const stroke = cylinders.get(name).stroke;
+      if (ends.get(letter) !== 'out' && stroke >= .97) { ends.set(letter, 'out'); moves.push({move:letter + '+', t, phase}); }
+      else if (ends.get(letter) !== 'in' && stroke <= .03) { ends.set(letter, 'in'); moves.push({move:letter + '-', t, phase}); }
+    }
+    leakPeak = Math.max(leakPeak, sim.leakPorts.length);
+  };
+  while (t < 3) { step(); watch('before'); }
+  const [, kind, number] = /^(push|selector)(\d+)$/i.exec(spec.start ?? 'push1') ?? [, 'push', '1'];
+  const starter = instances.find(inst => inst.logic === kind.toLowerCase() && inst.ii === Number(number) - 1);
+  const expected = String(spec.sequence ?? '').trim().split(/\s+/).filter(Boolean).map(token => token.replace('−', '-'));
+  const startAt = t;
+  if (starter?.logic === 'push') starter.manual = true;
+  if (starter?.logic === 'selector') starter.on = true;
+  let lastMove = t;
+  while (t < startAt + (spec.timeout ?? 25)) {
+    if (starter?.logic === 'push' && t - startAt > .5) starter.manual = false;
+    const before = moves.length;
+    step();
+    watch('run');
+    if (moves.length !== before) lastMove = t;
+    const done = moves.filter(m => m.phase === 'run').length >= expected.length;
+    if (done && t - lastMove > 3) break;
+  }
+  const run = moves.filter(m => m.phase === 'run').map(m => m.move);
+  const early = moves.filter(m => m.phase === 'before').map(m => m.move);
+  const observed = run.slice(0, expected.length);
+  const pass = !!expected.length && !early.length && observed.join(' ') === expected.join(' ');
+  for (const inst of instances) Object.assign(inst, {on:false, manual:false, stroke:0, timerStart:null, contact:false});
+  hand.on = false;
+  return {pass, observed:run.join(' '), early:early.join(' '), extra:Math.max(0, run.length - expected.length),
+    leaks:leakPeak, starter:starter ? spec.start : null, seconds:Math.round((t - startAt) * 10) / 10};
+}
+
+if (PERSIST) {
+  try {
+    const savedWork = JSON.parse(localStorage.getItem(WORK_KEY) ?? 'null');
+    if (savedWork?.workId && Array.isArray(savedWork.log)) work = savedWork;
+    const student = JSON.parse(localStorage.getItem(STUDENT_KEY) ?? 'null');
+    if (student) { studentId.value = student.id ?? ''; studentName.value = student.name ?? ''; }
+  } catch {}
+  for (const input of [studentId, studentName]) input.addEventListener('change', saveWork);
+  document.querySelector('#export-work').addEventListener('click', exportWork);
+  const importInput = document.querySelector('#import-file');
+  document.querySelector('#import-work').addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files[0];
+    if (file) importWork(await file.text(), file.name);
+    importInput.value = '';
+  });
+  document.querySelector('#new-work').addEventListener('click', newWork);
+} else {
+  // Embedded in the teacher page: view and test circuits sent by message, store nothing.
+  document.querySelector('#workbar').hidden = true;
+  document.querySelector('header p').textContent = 'โหมดตรวจงาน · แสดงวงจรจากไฟล์ของนักศึกษา (ไม่บันทึกอะไรลงเครื่อง)';
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (message?.source !== 'pneu-teacher') return;
+    let reply;
+    try {
+      applyCircuit(message.circuit);
+      const result = message.type === 'test' ? runCircuitTest(message.spec) : null;
+      if (message.type === 'test') applyCircuit(message.circuit);
+      reply = {source:'pneu-sim', id:message.id, ok:true, result};
+    } catch (error) {
+      reply = {source:'pneu-sim', id:message.id, ok:false, error:String(error?.message ?? error)};
+    }
+    event.source?.postMessage(reply, '*');
+  });
+  parent.postMessage({source:'pneu-sim', type:'ready'}, '*');
+}
+
+layout.ready = true;
+updateCaptions();
+loadAdded();
+loadHoses();
+select(0);
+if (PERSIST) {
+  logEvent('open', {hoses:sim.hoses.length, parts:instances.filter(inst => inst.added).length});
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

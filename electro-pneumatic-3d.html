@@ -1,0 +1,2258 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ชุดฝึกไฟฟ้า–ลม 3D</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101620;color:#eef2f6;font:16px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:auto;padding:clamp(16px,4vw,48px)}
+header{display:flex;justify-content:space-between;align-items:end;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:clamp(24px,4vw,42px);line-height:1.15;margin:0 0 8px;letter-spacing:-.025em}p{margin:0;color:#b9c6d5}
+nav{display:flex;gap:8px;flex-wrap:wrap}button{font:inherit;color:inherit;background:#222e3d;border:1px solid #45576c;border-radius:8px;padding:8px 13px;cursor:pointer}
+button:hover,button[aria-pressed=true]{background:#314b65}button:focus-visible,canvas:focus-visible{outline:2px solid #84d5ff;outline-offset:3px}
+.stage{position:relative;height:clamp(430px,72vh,850px);overflow:hidden;border-radius:16px;border:1px solid #344253;background:radial-gradient(ellipse at 50% 39%,#394958,#16202d 75%)}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+footer{margin-top:10px;font-size:14px;background:#182633;border:1px solid #344253;border-radius:12px;padding:12px}
+.toolbar-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.toolbar-row button{min-width:40px}.stage.selecting canvas{cursor:crosshair}
+#selection{position:absolute;pointer-events:none;border:1px solid #85d7ff;background:#64bbef38}
+#error{position:absolute;inset:40% 10% auto;text-align:center;color:white}
+.work{display:grid;gap:8px;background:#182633;border:1px solid #344253;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.work-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.work-row[hidden]{display:none}
+.work input{font:inherit;color:inherit;background:#0f1923;border:1px solid #45576c;border-radius:8px;padding:7px 10px;min-width:0}
+.work input#work-id{width:150px}.work input#work-name{flex:1 1 200px;max-width:320px}
+.work input:focus-visible{outline:2px solid #84d5ff;outline-offset:1px}
+.work button.primary{background:#1f5a34;border-color:#3b8f4e}
+#work-info,#view-info{flex:1 1 260px;color:#dbe6f1}
+#work-msg{flex:1 1 260px;font-size:13px;color:#9fb2c5}#work-msg.warn{color:#ffb86b}
+#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#tip{position:absolute;pointer-events:none;background:#0d141ce8;border:1px solid #4d6378;border-radius:6px;padding:3px 8px;font-size:13px;white-space:nowrap;transform:translate(-50%,calc(-100% - 14px))}
+#tip small{display:block;color:#9fb2c5;font-size:11px}
+.wiring{margin-top:12px;border-top:1px solid #344253;padding-top:10px}
+#status{color:#dbe6f1}#status.warn{color:#ffb86b}
+#links{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px;max-height:180px;overflow:auto}
+#links li{display:flex;align-items:center;gap:8px;background:#1f2e3d;border-radius:6px;padding:3px 4px 3px 8px;font-size:13px}
+#links li span.text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#links .swatch{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid #fff5}
+#links button{padding:2px 9px;font-size:13px}
+#sim{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:#c9d6e2}
+#sim li.warn{flex-basis:100%;color:#ffb86b}
+#air[aria-pressed=true]{background:#1f5a34;border-color:#3b8f4e}
+.section-title{margin:0 0 6px;color:#dbe6f1;font-size:14px}.section-title small{color:#8ea1b4}
+#speeds{display:grid;gap:6px}
+.speed-row{display:grid;grid-template-columns:minmax(140px,210px) 1fr 1fr;align-items:center;gap:4px 16px;font-size:13px}
+.speed-row[hidden]{display:none}
+.speed-name{color:#c9d6e2}
+.speed-row label{display:flex;align-items:center;gap:8px;color:#b9c6d5;min-width:0}
+.speed-row label span{flex:none;min-width:78px}
+.speed-row input{flex:1;min-width:60px;accent-color:#3d9ad6}
+.speed-fixed{color:#7d8fa2}
+@media (max-width:640px){.speed-row{grid-template-columns:1fr 1fr}.speed-name{grid-column:1/-1}}
+@media (max-width:420px){.speed-row{grid-template-columns:1fr}}
+#power[aria-pressed=true],#ext-power[aria-pressed=true]{background:#6a2620;border-color:#c0473b}
+#links:empty::before{content:'ยังไม่มีสาย';color:#8395a8;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>ชุดฝึกไฟฟ้า–ลม 3D</h1><p>แบบจำลองอุปกรณ์บนแผงฝึก 24 VDC</p></div>
+<nav aria-label="ป้ายบนแผง"><button id="relay-addon" aria-pressed="false">＋ หน้าสัมผัสรีเลย์ 1–2 (4CO)</button><button id="expansion" aria-pressed="false">＋ เพิ่มแผงเสริม</button><button id="toggle" aria-pressed="true">ป้ายอุปกรณ์</button></nav></header>
+<section class="work" aria-label="งานของนักศึกษา">
+  <div id="work-start" class="work-row">
+    <input id="work-id" placeholder="รหัสนักศึกษา" autocomplete="off" inputmode="text" aria-label="รหัสนักศึกษา">
+    <input id="work-name" placeholder="ชื่อ-นามสกุล" autocomplete="off" aria-label="ชื่อ-นามสกุล">
+    <button id="work-begin" class="primary">เริ่มทำงาน</button>
+  </div>
+  <div id="work-active" class="work-row" hidden>
+    <span id="work-info"></span>
+    <button id="work-save" class="primary">💾 บันทึกงาน</button>
+    <button id="work-end">จบงาน</button>
+  </div>
+  <div id="work-view" class="work-row" hidden>
+    <span id="view-info"></span>
+    <button id="view-resume" class="primary">ทำงานต่อ</button>
+    <button id="view-close">ปิดการดู</button>
+  </div>
+  <div class="work-row">
+    <button id="work-open">📂 เปิดงาน (.ep)</button>
+    <input type="file" id="work-file" accept=".ep,application/json" hidden>
+    <p id="work-msg" role="status">นักศึกษา: กรอกรหัสและชื่อแล้วกด "เริ่มทำงาน" ทุกขั้นตอนจะถูกบันทึกลงไฟล์งานที่ส่งอาจารย์</p>
+  </div>
+</section>
+<div class="stage"><canvas id="view" tabindex="0" aria-label="โมเดลชุดฝึกไฟฟ้า–ลม 3 มิติ ใช้ปุ่มลูกศรเพื่อหมุน และปุ่มบวกหรือลบเพื่อซูม"></canvas><svg id="overlay" aria-hidden="true"></svg><div id="tip" hidden></div><div id="selection" hidden></div><p id="error" role="status" hidden>เปิดโมเดล 3 มิติไม่สำเร็จ ลองโหลดหน้าใหม่ หรือเปิดไฟล์ใน Chrome หรือ Edge</p></div>
+<footer>
+  <div class="toolbar-row">
+    <p id="guide">ลากซ้ายเพื่อหมุน · Ctrl + ลากซ้ายเพื่อเลื่อน · หมุนล้อหรือลากขวาเพื่อซูม</p>
+    <nav aria-label="หมุนและซูม">
+      <button id="rotate-left" aria-label="หมุนซ้าย" title="หมุนซ้าย">↶</button>
+      <button id="rotate-right" aria-label="หมุนขวา" title="หมุนขวา">↷</button>
+      <button id="zoom-out" aria-label="ซูมออก" title="ซูมออก">−</button>
+      <button id="zoom-in" aria-label="ซูมเข้า" title="ซูมเข้า">+</button>
+    </nav>
+  </div>
+  <nav aria-label="มุมมอง">
+    <button id="top">มุมบน</button><button id="reset">มุม 3D</button>
+    <button id="area-zoom" aria-pressed="false"><span aria-hidden="true">⬚</span> ซูมเฉพาะส่วน</button>
+  </nav>
+  <section class="wiring" aria-label="การต่อสาย">
+    <div class="toolbar-row">
+      <p id="status" role="status">คลิกขั้วเสียบไฟหรือพอร์ตลม แล้วคลิกปลายอีกด้านเพื่อต่อสาย · คลิกที่ตัวสายเพื่อลบ</p>
+      <nav aria-label="จัดการสาย">
+        <button id="sound" aria-pressed="true">🔊 เสียง: เปิด</button>
+        <button id="power" aria-pressed="false">ไฟ 24 V: ปิด</button>
+        <button id="ext-power" aria-pressed="false" hidden>ไฟแผงเสริม: ปิด</button>
+        <button id="air" aria-pressed="false">ลมหลัก: ปิด</button>
+        <button id="undo">เลิกทำ</button>
+        <button id="clear">ล้างสายทั้งหมด</button>
+      </nav>
+    </div>
+    <ol id="links"></ol>
+  </section>
+  <section class="wiring" aria-label="ความเร็วกระบอกสูบ">
+    <p class="section-title">ความเร็วกระบอกสูบ <small>(วาล์วปรับความเร็วแบบ meter-out · ปรับที่นี่ หรือคลิกปุ่มหมุนบนข้อต่อกระบอกสูบ)</small></p>
+    <div id="speeds"></div>
+  </section>
+  <section class="wiring" aria-label="สถานะการจำลอง">
+    <ul id="sim" aria-live="polite"></ul>
+  </section>
+</footer>
+</main>
+<script>
+'use strict';
+// ---- Work-file signing: keep this block identical in index.html and checker.html ----
+// A student's .ep file carries their ID, a log of every step, a hash chain over that
+// log seeded with the ID, and a signature over the final state. Editing any of it
+// (e.g. swapping in another student ID) breaks the chain or the signature.
+const WorkFile=(()=>{
+  const primes=[];
+  for(let n=2;primes.length<64;n++) if(primes.every(p=>n%p)) primes.push(n);
+  const frac=x=>Math.floor((x-Math.floor(x))*4294967296)>>>0;
+  const K=Uint32Array.from(primes,p=>frac(Math.cbrt(p)));
+  const H0=Uint32Array.from(primes.slice(0,8),p=>frac(Math.sqrt(p)));
+  function sha256(text) {
+    const data=new TextEncoder().encode(text);
+    const padded=new Uint8Array((data.length+72)&~63);
+    padded.set(data);padded[data.length]=0x80;
+    const view=new DataView(padded.buffer);
+    view.setUint32(padded.length-8,Math.floor(data.length/536870912));
+    view.setUint32(padded.length-4,(data.length*8)>>>0);
+    const H=H0.slice(), W=new Uint32Array(64);
+    const rot=(x,n)=>x>>>n|x<<(32-n);
+    for(let i=0;i<padded.length;i+=64){
+      for(let t=0;t<16;t++) W[t]=view.getUint32(i+t*4);
+      for(let t=16;t<64;t++)
+        W[t]=W[t-16]+(rot(W[t-15],7)^rot(W[t-15],18)^W[t-15]>>>3)+W[t-7]+(rot(W[t-2],17)^rot(W[t-2],19)^W[t-2]>>>10);
+      let [a,b,c,d,e,f,g,h]=H;
+      for(let t=0;t<64;t++){
+        const t1=(h+(rot(e,6)^rot(e,11)^rot(e,25))+((e&f)^(~e&g))+K[t]+W[t])>>>0;
+        const t2=((rot(a,2)^rot(a,13)^rot(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+        h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+      }
+      H[0]+=a;H[1]+=b;H[2]+=c;H[3]+=d;H[4]+=e;H[5]+=f;H[6]+=g;H[7]+=h;
+    }
+    return Array.from(H,x=>x.toString(16).padStart(8,'0')).join('');
+  }
+  const SECRET=['z4Rw','!7xL','p2Qv','#9Mk','-620','2-TPE'].join('').split('').reverse().join('');
+  const FORMAT='electro-pneumatic-work';
+  const genesis=f=>sha256([SECRET,f.student.id,f.student.name,f.sessionId,f.startedAt].join('|'));
+  const step=(hash,entry)=>sha256(hash+'|'+JSON.stringify(entry));
+  const signature=f=>sha256([SECRET,f.chain,JSON.stringify(f.state),f.savedAt,f.student.id,
+    f.student.name,f.sessionId,f.deviceId,f.startedAt].join('|'));
+  const pairKey=(a,b)=>a<b?a+'~'+b:b+'~'+a;
+  // Rebuild the final wiring from the log: S start, + add, − remove, L snapshot, X/Y panels.
+  function replay(log) {
+    let links=[], expansion=false, addon=false;
+    for(const [,code,d] of log){
+      if(code==='S'){links=d.links.map(l=>l.slice(0,3));expansion=!!d.expansion;addon=!!d.addon;}
+      else if(code==='L') links=d.map(l=>l.slice(0,3));
+      else if(code==='+') links.push(d.slice(0,3));
+      else if(code==='-'){
+        const i=links.findIndex(l=>pairKey(l[0],l[1])===pairKey(d[0],d[1]));
+        if(i>=0) links.splice(i,1);
+      }
+      else if(code==='X') expansion=!!d;
+      else if(code==='Y') addon=!!d;
+    }
+    return {links,expansion,addon};
+  }
+  const sameLinks=(a,b)=>{
+    const norm=list=>list.map(([x,y,k])=>pairKey(x,y)+'~'+k).sort().join(',');
+    return norm(a)===norm(b);
+  };
+  function verify(f) {
+    try {
+      if(!f || f.format!==FORMAT) return {ok:false,problems:['ไม่ใช่ไฟล์งานของชุดฝึกไฟฟ้า–ลม']};
+      const problems=[];
+      let hash=genesis(f);
+      for(const entry of f.log) hash=step(hash,entry);
+      if(hash!==f.chain) problems.push('ประวัติการทำงานถูกแก้ไข (hash chain ไม่ตรง)');
+      if(signature(f)!==f.sig) problems.push('ลายเซ็นไม่ตรง: ข้อมูลในไฟล์ถูกแก้ไขหลังบันทึก');
+      const r=replay(f.log);
+      if(!sameLinks(r.links,f.state.links) || r.expansion!==!!f.state.expansion || r.addon!==!!f.state.relayAddon)
+        problems.push('สายในไฟล์ไม่ตรงกับประวัติการทำงาน');
+      return {ok:!problems.length,problems};
+    } catch(error) {
+      return {ok:false,problems:['อ่านไฟล์ไม่ได้: '+error.message]};
+    }
+  }
+  return {sha256,FORMAT,genesis,step,signature,replay,verify,pairKey};
+})();
+
+const canvas = document.querySelector('#view');
+const errorMessage = document.querySelector('#error');
+try {
+  start();
+} catch (error) {
+  console.error('Unable to initialize the 3D model', error);
+  errorMessage.hidden = false;
+}
+
+function start() {
+  const gl = canvas.getContext('webgl', {alpha:true,antialias:true});
+  if (!gl) throw new Error('WebGL context unavailable');
+  canvas.addEventListener('webglcontextlost', () => { errorMessage.hidden = false; });
+  const vertexSource = `
+    attribute vec3 position, normal, color;
+    attribute float metal;
+    uniform mediump vec3 eye;
+    uniform vec3 right, up, forward;
+    uniform vec2 scale;
+    uniform vec2 clipDepth;
+    varying mediump vec3 point, n, tint;
+    varying mediump float shine;
+    void main() {
+      vec3 delta = position - eye;
+      float depth = dot(delta,forward);
+      gl_Position = vec4(dot(delta,right)*scale.x,dot(delta,up)*scale.y,
+                         clipDepth.x*depth+clipDepth.y,depth);
+      point=position; n=normal; tint=color; shine=metal;
+    }`;
+  const fragmentSource = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+    uniform sampler2D panelInk;
+    uniform sampler2D contactShadows;
+    uniform sampler2D extInk;
+    uniform sampler2D extShadows;
+    uniform sampler2D addonInk;
+    uniform bool showInk, showAddon;
+    uniform mediump vec3 eye;
+    varying mediump vec3 point,n,tint;
+    varying mediump float shine;
+    void main() {
+      vec3 N=normalize(n), V=normalize(eye-point);
+      vec3 L=normalize(vec3(-.46,.81,.36));
+      vec3 F=normalize(vec3(.66,.49,-.38));
+      float diffuse=max(dot(N,L),0.);
+      float fill=max(dot(N,F),0.);
+      float highlight=pow(max(dot(N,normalize(L+V)),0.),32.);
+      vec3 reflected=reflect(-V,N);
+      float strip=smoothstep(.18,.28,reflected.y)*(1.-smoothstep(.63,.86,reflected.y));
+      float rim=pow(1.-max(dot(N,V),0.),3.);
+      vec3 c=tint*(.42+.43*diffuse+.15*fill+shine*.19*strip);
+      c+=vec3(.76,.88,1.)*(.16*highlight+shine*(.16*highlight+.15*strip+.09*rim));
+      vec2 uv=point.xz/12.+.5;
+      vec4 ink=texture2D(panelInk,uv);
+      float shadow=texture2D(contactShadows,uv).a;
+      // The expansion panel (z < -4.2) has its own artwork sheet.
+      vec2 extUv=vec2(uv.x,(point.z+16.2)/12.);
+      vec4 extArt=texture2D(extInk,extUv);
+      float extShade=texture2D(extShadows,extUv).a;
+      if (point.z<-4.2) {ink=extArt;shadow=extShade;}
+      // Labels for relay 1–2 contact sets 3–4: a 3 × 3 unit sheet at x 3.8…6.8, z −0.2…2.8.
+      vec2 addonUv=(point.xz-vec2(3.8,-.2))/3.;
+      vec4 addonArt=texture2D(addonInk,addonUv);
+      if (showAddon && addonUv.x>0. && addonUv.x<1. && addonUv.y>0. && addonUv.y<1.) {
+        ink=vec4(mix(ink.rgb,addonArt.rgb,addonArt.a),max(ink.a,addonArt.a));
+      }
+      if (abs(point.y-.08)<.002 && N.y>.99) {
+        if (showInk) c=mix(c,ink.rgb,ink.a);
+        c*=1.-shadow*.75;
+      }
+      gl_FragColor=vec4(c,1.);
+    }`;
+  function shader(type,source) {
+    const s=gl.createShader(type);
+    gl.shaderSource(s,source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  const program=gl.createProgram();
+  gl.attachShader(program,shader(gl.VERTEX_SHADER,vertexSource));
+  gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragmentSource));
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
+  gl.useProgram(program);
+
+  const silver='#bac3ca', steel='#87949e', chrome='#e0e6ec', black='#20252a',
+        white='#e4e5dd', red='#bd342c', blue='#235dad', green='#17945e', brass='#b6844d';
+  const mesh=[], extMesh=[], addonMesh=[];
+  let sink=mesh;
+  // While true, everything created belongs to the add-on expansion panel above the case.
+  let buildingExt=false;
+  // While true, everything created is the optional extra contact sets 3–4 of relays 1–2.
+  let buildingAddon=false;
+  // Connection points: every jack and air socket a hose or wire can plug into.
+  const ports=[];
+  let owner='';
+  function addPort(kind,name,pos,dir,hex) {
+    ports.push({id:'p'+ports.length,kind,device:owner,name,pos,dir,hex,ext:buildingExt,addon:buildingAddon});
+  }
+  const lastPort=()=>ports[ports.length-1];
+  // Things on the board you can operate by clicking: valve overrides, the air shut-off.
+  const controls=[];
+  function addControl(name,pos,action,hint,extra={}) {
+    controls.push({kind:'control',id:'c'+controls.length,device:owner,name,pos,action,hint,ext:buildingExt,...extra});
+  }
+  const valves=[], cylinders=[], limitSwitches=[], airOutlets=[];
+  // Indicator parts that change appearance with circuit state (drawn in drawMoving()).
+  const reedLeds=[], pushButtons=[], lamps=[], relayLeds=[];
+  function rgb(hex) {
+    return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+  }
+  function triangle(points,normals,color,metal) {
+    for (let i=0;i<3;i++) sink.push(...points[i],...normals[i],...color,metal);
+  }
+  function quad(a,b,c,d,n,color,m) {
+    triangle([a,b,c],[n,n,n],color,m);
+    triangle([a,c,d],[n,n,n],color,m);
+  }
+  function box(x,y,z,w,h,d,hex,m=0,angle=0) {
+    const cosine=Math.cos(angle),sine=Math.sin(angle);
+    const turn=(a,b,d)=>[a*cosine-d*sine,b,a*sine+d*cosine];
+    const p=(a,b,c)=>turn(a,b,c).map((value,i)=>value+[x,y,z][i]);
+    const [a,b,c,e,f,g,j,k]=[
+      [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+      [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]
+    ].map(([i,l,q])=>p(i*w/2,l*h/2,q*d/2));
+    const color=rgb(hex);
+    quad(a,b,c,e,turn(0,0,-1),color,m); quad(f,g,j,k,turn(0,0,1),color,m);
+    quad(a,e,k,f,turn(-1,0,0),color,m); quad(b,g,j,c,turn(1,0,0),color,m);
+    quad(e,c,j,k,[0,1,0],color,m); quad(a,b,g,f,[0,-1,0],color,m);
+  }
+  function cylinder(x,y,z,r,length,hex,m=0,axis='y',inner=0,sides=28) {
+    const color=rgb(hex);
+    const orient=(a,b,c)=>axis==='x'?[b,a,c]:axis==='z'?[a,c,b]:[a,b,c];
+    const at=(angle,h,radius)=>orient(Math.cos(angle)*radius,h,Math.sin(angle)*radius)
+      .map((v,i)=>v+[x,y,z][i]);
+    for(let i=0;i<sides;i++){
+      const a=i*2*Math.PI/sides,b=(i+1)*2*Math.PI/sides,h=length/2;
+      const n=t=>orient(Math.cos(t),0,Math.sin(t));
+      const p=at(a,-h,r),q=at(b,-h,r),s=at(b,h,r),t=at(a,h,r);
+      triangle([p,q,s],[n(a),n(b),n(b)],color,m);
+      triangle([p,s,t],[n(a),n(b),n(a)],color,m);
+      for(const sign of [-1,1]) {
+        const level=sign*h, normal=orient(0,sign,0);
+        quad(at(a,level,r),at(b,level,r),at(b,level,inner),at(a,level,inner),normal,color,m);
+      }
+      if(inner) quad(at(a,-h,inner),at(b,-h,inner),at(b,h,inner),at(a,h,inner),
+        n((a+b)/2).map(v=>-v),color,m);
+    }
+  }
+
+  const screw=(x,y,z)=>{
+    cylinder(x,y,z,.073,.054,chrome,.9);
+    cylinder(x,y+.028,z,.033,.006,black,.1,'y',0,6);
+  };
+  const jack=(x,z,hex=black,name)=>{
+    cylinder(x,.115,z,.106,.083,hex,.12,'y',.053);
+    cylinder(x,.074,z,.050,.007,'#0a0e12');
+    cylinder(x,.158,z,.063,.01,hex,.25,'y',.052);
+    if(name) addPort('elec',name,[x,.163,z],[0,1,0],hex);
+  };
+  const pair=(x,z,prefix='')=>{jack(x,z,red,prefix+'24 V');jack(x+.28,z,blue,prefix+'0 V');};
+  function contacts(x,z,prefix='',n=1) {
+    jack(x-.16,z,black,prefix+'NO ('+n+'4)');
+    jack(x+.16,z,black,prefix+'NC ('+n+'2)');
+    jack(x,z+.22,black,prefix+'COM ('+n+'1)');
+  }
+  function fitting(x,y,z,cap=white,axis='y') {
+    cylinder(x,y,z,.115,.12,steel,.7,axis,0,6);
+    const [dx,dy,dz]=axis==='x'?[.09,0,0]:axis==='z'?[0,0,.09]:[0,.09,0];
+    cylinder(x+dx,y+dy,z+dz,.095,.125,cap,.13,axis,.055);
+  }
+  function valveElbow(x,y,z,direction,name) {
+    addPort('air',name,[x,y+.289,z+direction*.235],[0,1,0],white);
+    const bend=.145, bodyRadius=.085;
+    const segments=10, sides=24;
+    const color=rgb(white);
+    // The horizontal threaded end enters the valve; the open socket faces up.
+    cylinder(x,y,z+direction*.047,.111,.106,steel,.76,'z',0,6);
+    const start=z+direction*.09;
+    function ring(step) {
+      const angle=step*Math.PI/(2*segments);
+      const sin=Math.sin(angle), cos=Math.cos(angle);
+      return Array.from({length:sides},(_,i)=>{
+        const around=i*2*Math.PI/sides;
+        const normal=[Math.cos(around),-cos*Math.sin(around),direction*sin*Math.sin(around)];
+        const center=[x,y+bend*(1-cos),start+direction*bend*sin];
+        const point=center.map((value,axis)=>value+normal[axis]*bodyRadius);
+        return {point,normal};
+      });
+    }
+    let previous=ring(0);
+    for(let step=1;step<=segments;step++){
+      const next=ring(step);
+      for(let i=0;i<sides;i++){
+        const j=(i+1)%sides;
+        for(const face of [[previous[i],previous[j],next[j]],[previous[i],next[j],next[i]]]){
+          triangle(face.map(v=>v.point),face.map(v=>v.normal),color,.17);
+        }
+      }
+      previous=next;
+    }
+    const tipZ=start+direction*bend;
+    const tipY=y+bend;
+    cylinder(x,tipY+.047,tipZ,.096,.100,white,.16,'y',.053);
+    cylinder(x,tipY+.098,tipZ,.098,.025,chrome,.78,'y',.053);
+    cylinder(x,tipY+.125,tipZ,.104,.038,white,.14,'y',.055);
+    cylinder(x,tipY+.012,tipZ,.052,.018,black);
+  }
+  function speed(x,z,name) {
+    cylinder(x,.56,z,.087,.30,steel,.8,'y',0,6);
+    cylinder(x,.74,z,.117,.18,white);
+    // The adjusting knob on top is drawn in drawMoving(): it screws down as you throttle.
+    fitting(x,.73,z+.13,white,'z');
+    addPort('air',name,[x,.73,z+.283],[0,0,1],white);
+  }
+
+  // Carry case base and aluminum panel.
+  box(0,-.42,0,11.8,.81,8.25,silver,.65);
+  box(0,-.23,0,11.85,.1,8.29,black);
+  box(0,.025,0,11.53,.11,8.01,'#afb7be',.63);
+  for(const x of [-5.84,5.84]) box(x,.04,0,.15,.20,8.29,chrome,.7);
+  for(const z of [-4.1,4.1]) box(0,.04,z,11.84,.2,.15,chrome,.7);
+  for(const x of [-4.9,4.9]){
+    box(x,-.33,4.19,.46,.53,.16,chrome,.9);
+  }
+  for(const x of [-5.55,5.55]) for(const z of [-3.83,0,3.79]) screw(x,.114,z);
+  box(0,-.45,4.37,1.15,.20,.19,black);
+  for(const x of [-.67,.67]) box(x,-.44,4.25,.22,.28,.35,steel,.6);
+
+  const rodTip={height:.405, offset:1.71, radius:.202, length:.67};
+  const limitCylinder={x:-2.55,z:-.61,side:-1};
+  const stroke=.6;
+  function actuator(x,z,side,offsets,reed=false,title='') {
+    owner=title;
+    const cylinder_={title,x,z,side,single:offsets.length===1,cap:null,rod:null,s:0,drive:0,knobs:{},ext:buildingExt};
+    cylinders.push(cylinder_);
+    const y=rodTip.height;
+    cylinder(x,y,z,.227,2.05,silver,.95,'x');
+    for(const end of [-1,1]){
+      const px=x+end*1.04;
+      box(px,.11,z,.33,.08,.65,steel,.7);
+      box(px,.28,z,.13,.29,.43,steel,.65);
+      cylinder(px,y,z,.268,.20,chrome,.86,'x',0,12);
+      for(const offset of [-.25,.25]) screw(px,.171,z+offset);
+    }
+    // The piston rod and its tip move, so they are drawn each frame in drawMoving().
+    for(const offset of offsets){
+      const rodSide=Math.sign(offset)===side;
+      speed(x+offset,z,rodSide?'พอร์ตดึงกลับ (ฝั่งก้านสูบ)':'พอร์ตดันออก (ฝั่งท้ายกระบอก)');
+      cylinder_[rodSide?'rod':'cap']=lastPort();
+      // Meter-out: the rod-side throttle sets extend speed, the cap-side one sets retract
+      // speed. A single-acting cylinder has one throttle, which meters its extend stroke.
+      const knob={x:x+offset,z,factor:1,stroke:rodSide||offsets.length===1?'extend':'retract'};
+      cylinder_.knobs[knob.stroke]=knob;
+      addControl('วาล์วปรับความเร็ว',[x+offset,.90,z],()=>cycleSpeed(cylinder_,knob),
+        ()=>'คุมความเร็วตอน'+(knob.stroke==='extend'?'ยื่นออก':'หดกลับ')+' '+Math.round(knob.factor*100)+'% · คลิกเพื่อปรับ');
+    }
+    if(reed) for(const offset of [-.48,.47]){
+      cylinder(x+offset,y,z,.245,.14,steel,.83,'x');
+      box(x+offset,.67,z,.31,.12,.21,black);
+      reedLeds.push({pos:[x+offset+.14,.69,z],cylinder:cylinder_,end:offset*side<0?0:1});
+      cylinder(x+offset,.24,z+.38,.03,.56,white,.1,'z');
+      screw(x+offset,.75,z);
+    }
+  }
+  actuator(-2.32,-3.23,-1,[.91],false,'กระบอกสูบทางเดียว');
+  actuator(limitCylinder.x,limitCylinder.z,limitCylinder.side,[-.91,.91],false,'กระบอกสูบสองทาง (ลิมิตสวิตช์)');
+  actuator(2.25,-3.23,1,[-.91,.91],true,'กระบอกสูบสองทาง (รีดสวิตช์)');
+
+  function valve(x,z,ways,dual,title) {
+    owner=title;
+    const v={title,ways,dual,coils:{},manual:{Y1:false,Y2:false},position:'B',ext:buildingExt};
+    valves.push(v);
+    box(x,.31,z,1.24,.45,.87,white,.15);
+    const coil=direction=>{
+      // Double-solenoid (Airtac 4V120): the coil on the A-port side (left) is 14 → P→A,
+      // the right one is 12 → P→B. A single-solenoid valve's only coil is always Y1 (P→A).
+      const key=dual?(direction<0?'Y1':'Y2'):'Y1';
+      box(x+direction*.96,.28,z,.62,.41,.81,black,.14);
+      box(x+direction*1.36,.30,z,.25,.44,.79,'#30383e');
+      box(x+direction*1.06,.55,z-.21,.41,.18,.38,'#151a21',.20);
+      // The red manual-override button is drawn in drawMoving() so it can light up.
+      pair(x+direction*1.57-.13,z+.50,'คอยล์ '+key+' ');
+      const button=[x+direction*.66,.55,z+.24];
+      v.coils[key]={plus:ports[ports.length-2],minus:lastPort(),button};
+      addControl('ปุ่ม manual override '+key,[button[0],.575,button[2]],()=>pressOverride(v,key),
+        dual?'คลิกเพื่อสั่งวาล์วเลื่อนไปฝั่ง '+key:'คลิกเพื่อกดล็อก / ปลดล็อก');
+    };
+    coil(1);
+    if(dual) coil(-1);
+    else box(x-.69,.27,z,.14,.34,.77,black,.1);
+    valveElbow(x-.31,.33,z-.435,-1,ways===5?'ทางออก A (4)':'ทางออก A (2)');
+    v.A=lastPort();
+    if(ways===5) {valveElbow(x+.31,.33,z-.435,-1,'ทางออก B (2)');v.B=lastPort();}
+    valveElbow(x,.29,z+.435,1,'ลมเข้า P (1)');
+    v.P=lastPort();
+    for(const ex of ways===5?[-.43,.43]:[.36]){
+      cylinder(x+ex,.29,z+.46,.098,.11,steel,.75,'z',0,6);
+      cylinder(x+ex,.29,z+.52,.073,.022,brass,.52,'z');
+    }
+    for(const ex of [-.48,.48]) screw(x+ex,.56,z+.19);
+  }
+  valve(-1.95,-1.91,3,false,'วาล์ว 3/2 โซลินอยด์เดี่ยว');
+  valve(-2.0,.66,5,false,'วาล์ว 5/2 โซลินอยด์เดี่ยว');
+  valve(2.64,-1.81,5,true,'วาล์ว 5/2 โซลินอยด์คู่');
+
+  // Proximity sensor, roller switches, and electrical controls.
+  box(-5,.23,-2.65,.44,.28,.68,steel,.55);
+  cylinder(-5,.42,-2.63,.115,.63,steel,.8,'z');
+  // The sensor's orange LED cap is drawn in drawMoving().
+  cylinder(-5,.42,-2.61,.174,.11,silver,.7,'z',0,6);
+  owner='พร็อกซิมิตี้เซนเซอร์ (PNP)';
+  for(let i=0;i<3;i++) jack(-4.59,-2.94+i*.31,[red,blue,black][i],['24 V','0 V','OUTPUT'][i]);
+  // Folded mounting channel with an open side and a slot in its top flange.
+  box(-4.42,.111,.07,1.77,.059,.44,steel,.63);
+  box(-4.42,.29,.257,1.77,.34,.046,silver,.56);
+  for(const z of [-.054,.192]) box(-4.42,.472,z,1.77,.041,.172,silver,.57);
+  for(const x of [-5.245,-3.595]) box(x,.472,.07,.12,.041,.43,silver,.57);
+  for(const x of [-4.94,-4.56,-4.11,-3.76]){
+    cylinder(x,.492,.07,.087,.018,steel,.7);
+    screw(x,.523,.07);
+  }
+  function rollerSwitch(pivotX) {
+    const y=rodTip.height;
+    box(pivotX-.15,.26,.014,.45,.21,.278,black,.13);
+    box(pivotX-.15,.371,-.04,.39,.035,.22,'#353c40');
+    cylinder(pivotX,y,-.15,.042,.045,steel,.76);
+    limitSwitches.push({pivotX,pressed:false});
+  }
+  // The arm follows the rod tip, so it is rebuilt whenever the rod moves.
+  function rollerArm(sw,tipCenter) {
+    const {pivotX}=sw;
+    const pivotZ=-.15,armLength=.43,rollerRadius=.062;
+    const restZ=-.46;
+    const restingX=pivotX-Math.sqrt(armLength**2-(restZ-pivotZ)**2);
+    const pressed=Math.abs(restingX-tipCenter)<rodTip.length/2-rollerRadius;
+    sw.pressed=pressed;
+    const rollerZ=pressed?limitCylinder.z+rodTip.radius+rollerRadius:restZ;
+    const dz=rollerZ-pivotZ;
+    const dx=-Math.sqrt(armLength**2-dz**2);
+    const rollerX=pivotX+dx;
+    const y=rodTip.height;
+    box(pivotX+dx/2,y,pivotZ+dz/2,armLength,.033,.043,steel,.75,Math.atan2(-dz,-dx));
+    cylinder(rollerX,y,rollerZ,rollerRadius,.072,'#dcd6bd',.16,'y',0,36);
+    cylinder(rollerX,y+.039,rollerZ,.025,.014,chrome,.79);
+  }
+  rollerSwitch(-4.72);
+  rollerSwitch(-3.78);
+  for(const [i,x] of [-4.85,-3.87].entries()) {
+    owner='ลิมิตสวิตช์ '+(i+1);
+    contacts(x,.56);
+  }
+  for(const [i,x] of [3.72,4.62].entries()) {
+    owner='รีดสวิตช์ '+(i+1);
+    jack(x,-2.68,black,'ขั้ว 1');jack(x+.30,-2.68,black,'ขั้ว 2');
+  }
+
+  function power() {
+    owner='แหล่งจ่ายไฟ 24 VDC';
+    box(-4.28,.18,2.95,1.50,.23,.83,black);
+    box(-4.60,.31,2.95,.60,.045,.52,'#0c1015');
+    for(const [x,z] of [[-4.77,3.06],[-4.43,3.06],[-4.60,2.81]])
+      box(x,.344,z,.055,.04,.12,steel,.62);
+    // Red rocker power switch is drawn in drawMoving().
+    addControl('สวิตช์เปิด–ปิดแหล่งจ่ายไฟ',[-3.88,.40,2.96],()=>setPower(!powerOn),'คลิกเพื่อเปิด / ปิดไฟ 24 VDC');
+    for(const [i,c] of [red,red,blue,blue].entries()) jack(-4.93+i*.38,2.27,c,i<2?'+24 V':'0 V');
+  }
+  power();
+  for(const [i,[x,c]] of [[-2.45,green],[-1.22,red]].entries()){
+    const colorName=i?'แดง':'เขียว';
+    owner='ปุ่มกด '+(i+1)+' ('+colorName+')';
+    cylinder(x,.16,3.14,.29,.15,black);
+    const button={owner,x,z:3.14,hex:c,pressed:false};
+    pushButtons.push(button);
+    addControl('ปุ่มกด (ไม่ค้าง)',[x,.30,3.14],null,'กดเมาส์ค้างไว้เพื่อกดปุ่ม · ปล่อยเพื่อปล่อยปุ่ม',{
+      momentary:true,
+      down(){button.pressed=true;sfx.click(.3);record('B',button.owner);solveAll();},
+      up(){button.pressed=false;sfx.click(.18);solveAll();}
+    });
+    contacts(x,2.42);
+    owner='หลอดไฟ '+(i+1)+' ('+colorName+')';
+    cylinder(x,.16,1.77,.178,.15,black);
+    lamps.push({owner,x,z:1.77,hex:c,lit:i?'#ff6b5b':'#62ff9e',on:false});
+    jack(x-.29,1.77,red,'24 V');jack(x+.29,1.77,blue,'0 V');
+  }
+  function relayBody(x,z,device) {
+    box(x,.22,z,.55,.28,.57,black);
+    relayLeds.push({pos:[x-.10,.375,z-.07],device,ext:buildingExt});
+    box(x+.12,.38,z-.12,.16,.04,.16,brass,.35);
+  }
+  relayBody(1.23,-.55,'รีเลย์ 1');
+  relayBody(2.56,-.55,'รีเลย์ 2');
+  owner='ไทเมอร์ 1';
+  addControl('ปุ่มหมุนตั้งเวลา',[4.26,.65,-.55],()=>cycleTimerDelay(),
+    ()=>'ตั้งไว้ '+timerDelays[timerDelayIndex]+' วินาที (หน่วงเวลาเมื่อคอยล์มีไฟ) · คลิกเพื่อเปลี่ยน');
+  box(4.26,.31,-.55,.54,.46,.58,'#c8c4ab');
+  cylinder(4.26,.572,-.55,.202,.09,chrome,.59);
+  cylinder(4.26,.626,-.55,.139,.04,'#767b80',.36);
+  box(4.26,.651,-.60,.021,.013,.105,white);
+  for(const [i,z] of [.36,1.22,2.02].entries()){
+    owner=['รีเลย์ 1','รีเลย์ 2','ไทเมอร์ 1'][i];
+    jack(.86,z,red,'คอยล์ A1 (24 V)');jack(.86,z+.29,blue,'คอยล์ A2 (0 V)');
+    contacts(2.10,z,'หน้าสัมผัสชุด 1 ',1);contacts(3.26,z,'หน้าสัมผัสชุด 2 ',2);
+  }
+
+  box(2.51,.145,3.19,3.89,.14,.46,silver,.74);
+  owner='ชุดจ่ายลม';
+  for(let i=0;i<6;i++) {
+    fitting(.85+i*.53,.25,3.19,blue);
+    addPort('air','ทางจ่ายลม '+(i+1),[.85+i*.53,.40,3.19],[0,1,0],blue);
+    airOutlets.push(lastPort());
+  }
+  for(const x of [.66,4.32]) screw(x,.23,3.39);
+  cylinder(4.2,.27,3.19,.12,.25,white,.1,'x');
+  cylinder(4.53,.27,3.19,.063,.53,blue,.1,'x');
+  box(5.03,.24,3.19,.52,.28,.36,white,.10);
+  cylinder(5.03,.43,3.19,.176,.15,silver,.4);
+  // Shut-off handle is drawn in drawMoving(): along the pipe = open, across = closed.
+  owner='วาล์วลมหลัก (AIR SHUT-OFF)';
+  addControl('คันโยกเปิด–ปิดลม',[5.03,.62,3.19],()=>setAir(!airOn),'คลิกเพื่อเปิด / ปิดลมเข้าแผง');
+  fitting(5.38,.27,3.19,white,'x');
+
+  // ---- Expansion panel (add-on case section above the main board) --------
+  // Its geometry lives in extMesh and is only drawn while the panel is fitted.
+  // The panel runs from the main case (z −4.15) up to z −10.65.
+  const ext={z:-7.4,depth:6.5,top:-10.65};
+  // Cylinder sets: a double-acting cylinder with two reed switches and its 5/2
+  // double-solenoid valve, all in line with the reed-switch cylinder on the main board.
+  // Valve-to-cylinder spacing matches the main board (1.42).
+  const cylSet=(n,valveZ,firstReed)=>({n,firstReed,valve:{x:2.64,z:valveZ},
+    cylinder:{x:2.25,z:valveZ-1.42},reeds:[3.72,4.62],reedZ:valveZ-.87});
+  ext.cylSets=[cylSet(1,-5.15,3),cylSet(2,-8.25,5)];
+  // Compact 4CO relay modules (3.3 × 1.6) stacked on the left: relay 3 at the top.
+  ext.relays=[['รีเลย์ 3 (4CO)','RELAY 3 (4CO)',-5.3,-10.2],['รีเลย์ 4 (4CO)','RELAY 4 (4CO)',-5.3,-8.4],
+    ['รีเลย์ 5 (4CO)','RELAY 5 (4CO)',-5.3,-6.6]]
+    .map(([device,label,ox,oz])=>({device,label,ox,oz,x:ox+.45,z:oz+.95,coilX:ox+1.3,coilZ:oz+.6,
+      sets:[[ox+2.15,oz+.3],[ox+2.95,oz+.3],[ox+2.15,oz+1.1],[ox+2.95,oz+1.1]]}));
+  function extCylinderSet(set) {
+    const {n,cylinder:c,valve:v}=set;
+    actuator(c.x,c.z,1,[-.91,.91],true,'กระบอกสูบสองทาง (แผงเสริม '+n+')');
+    valve(v.x,v.z,5,true,'วาล์ว 5/2 โซลินอยด์คู่ (แผงเสริม '+n+')');
+    for(const [i,x] of set.reeds.entries()) {
+      owner='รีดสวิตช์ '+(set.firstReed+i);
+      jack(x,set.reedZ,black,'ขั้ว 1');jack(x+.30,set.reedZ,black,'ขั้ว 2');
+    }
+  }
+  // Four-changeover relays (Schneider RXM4 style): one coil, four C/O contact sets each.
+  function extRelay(r) {
+    owner=r.device;
+    relayBody(r.x,r.z,owner);
+    jack(r.coilX,r.coilZ,red,'คอยล์ A1 (24 V)');
+    jack(r.coilX,r.coilZ+.29,blue,'คอยล์ A2 (0 V)');
+    r.sets.forEach(([x,z],i)=>contacts(x,z,'หน้าสัมผัสชุด '+(i+1)+' ',i+1));
+  }
+  sink=extMesh;
+  buildingExt=true;
+  box(0,-.42,ext.z,11.8,.81,ext.depth,silver,.65);
+  box(0,-.23,ext.z,11.85,.1,ext.depth+.04,black);
+  box(0,.025,ext.z,11.53,.11,ext.depth-.24,'#afb7be',.63);
+  for(const x of [-5.84,5.84]) box(x,.04,ext.z,.15,.20,ext.depth+.04,chrome,.7);
+  for(const z of [ext.z-ext.depth/2,ext.z+ext.depth/2-.02]) box(0,.04,z,11.84,.2,.15,chrome,.7);
+  for(const x of [-5.55,5.55]) for(const z of [-4.6,-7.4,-10.25]) screw(x,.114,z);
+  // Joining plates that clamp the add-on to the main case.
+  for(const x of [-4.2,0,4.2]){
+    box(x,.15,-4.15,.7,.04,.42,chrome,.8);
+    for(const dz of [-.12,.12]) screw(x,.18,-4.15+dz);
+  }
+  // Built in the original order so saved wiring keeps pointing at the same jacks.
+  extCylinderSet(ext.cylSets[0]);
+  extRelay(ext.relays[0]);
+  extRelay(ext.relays[1]);
+  buildingExt=false;
+  sink=mesh;
+
+  // ---- Optional contact sets 3–4 for relays 1–2 (turns them into 4CO) ----
+  // Built last so the ids of every port created earlier stay the same.
+  const addonSets=[[4.42,3],[5.40,4]];
+  sink=addonMesh;
+  buildingAddon=true;
+  for(const [i,z] of [.36,1.22].entries()){
+    owner=['รีเลย์ 1','รีเลย์ 2'][i];
+    for(const [x,n] of addonSets) contacts(x,z,'หน้าสัมผัสชุด '+n+' ',n);
+  }
+  buildingAddon=false;
+  sink=mesh;
+
+  // ---- Expansion panel, second batch: cylinder set 2 and relay 5 ----------
+  sink=extMesh;
+  buildingExt=true;
+  extCylinderSet(ext.cylSets[1]);
+  extRelay(ext.relays[2]);
+
+  // ---- Expansion panel, third batch: 24 VDC power supply module ----------
+  // Fed from the main supply (same rocker switch), so both panels share +24 V / 0 V.
+  ext.psu={x:-.80,z:-9.45,plusZ:-8.62,zeroZ:-8.17,jackX:[-1.20,-.80,-.40,0]};
+  {
+    const p=ext.psu;
+    owner='แหล่งจ่ายไฟ 24 VDC (แผงเสริม)';
+    box(p.x,.18,p.z,1.50,.23,.83,black);
+    box(p.x-.32,.31,p.z,.60,.045,.52,'#0c1015');
+    for(const [x,z] of [[p.x-.49,p.z+.11],[p.x-.15,p.z+.11],[p.x-.32,p.z-.14]])
+      box(x,.344,z,.055,.04,.12,steel,.62);
+    // Its own red rocker switch is drawn in drawMoving().
+    addControl('สวิตช์เปิด–ปิดแหล่งจ่ายไฟแผงเสริม',[p.x+.40,.40,p.z],()=>setExtPower(!extPowerOn),'คลิกเพื่อเปิด / ปิดไฟ 24 VDC ของแผงเสริม');
+    for(const x of p.jackX) jack(x,p.plusZ,red,'+24 V');
+    for(const x of p.jackX) jack(x,p.zeroZ,blue,'0 V');
+  }
+  // ---- Expansion panel, fourth batch: momentary push buttons 3–4 ----------
+  ext.buttons=[[-1.30,green,'เขียว'],[-.30,red,'แดง']].map(([x,hex,colorName],i)=>({x,z:-5.55,contactZ:-6.45,hex,colorName,n:i+3}));
+  for(const b of ext.buttons){
+    owner='ปุ่มกด '+b.n+' ('+b.colorName+')';
+    cylinder(b.x,.16,b.z,.29,.15,black);
+    const button={owner,x:b.x,z:b.z,hex:b.hex,pressed:false,ext:true};
+    pushButtons.push(button);
+    addControl('ปุ่มกด (ไม่ค้าง)',[b.x,.30,b.z],null,'กดเมาส์ค้างไว้เพื่อกดปุ่ม · ปล่อยเพื่อปล่อยปุ่ม',{
+      momentary:true,
+      down(){button.pressed=true;sfx.click(.3);record('B',button.owner);solveAll();},
+      up(){button.pressed=false;sfx.click(.18);solveAll();}
+    });
+    contacts(b.x,b.contactZ);
+  }
+  buildingExt=false;
+  sink=mesh;
+
+  const artwork=document.createElement('canvas');
+  artwork.width=artwork.height=2048;
+  let ink=artwork.getContext('2d');
+  const pixelsPerUnit=artwork.width/12;
+  ink.translate(artwork.width/2,artwork.height/2);
+  ink.scale(pixelsPerUnit,pixelsPerUnit);
+  ink.fillStyle='#22282c';
+  ink.strokeStyle='#42494e';
+  ink.textBaseline='middle';
+  function print(text,x,z,size=.109,align='center') {
+    ink.font='600 '+size+'px Arial, sans-serif';
+    ink.textAlign=align;
+    ink.fillText(text,x,z);
+  }
+  function outline(x,z,width,depth) {
+    ink.lineWidth=.010;
+    ink.strokeRect(x,z,width,depth);
+  }
+  function line(points,dashed=false) {
+    ink.lineWidth=.012;
+    ink.setLineDash(dashed?[.063,.045]:[]);
+    ink.beginPath();
+    points.forEach(([x,z],i)=>i?ink.lineTo(x,z):ink.moveTo(x,z));
+    ink.stroke();
+    ink.setLineDash([]);
+  }
+  function contactMark(x,z) {
+    line([[x+.16,z],[x+.04,z+.15],[x,z+.22]]);
+    line([[x-.16,z],[x-.08,z]]);
+  }
+  function voltagePair(x,z) {
+    print('24 V',x,z+.17,.08);
+    print('0 V',x+.28,z+.17,.08);
+  }
+
+  print('SINGLE-ACTING CYLINDER',-2.32,-2.81);
+  print('DOUBLE-ACTING CYLINDER',-2.55,-.24);
+  print('INDUCTIVE SENSOR (PNP)',-4.75,-2.01);
+  for(const [i,label] of ['24 V','0 V','OUTPUT'].entries())
+    print(label,-4.42,-2.94+i*.31,.085,'left');
+  print('LIMIT SWITCH',-4.35,.36);
+  for(const x of [-4.85,-3.87]) contactMark(x,.56);
+  for(const [i,x] of [3.72,4.62].entries()) {
+    line([[x,-2.68],[x+.30,-2.68]]);
+    print('REED SWITCH '+(i+1),x+.15,-2.44,.095);
+    print('REED SWITCH '+(i+1),i===0?1.77:2.72,-2.88,.09);
+  }
+  print('3/2 SINGLE SOLENOID VALVE',-1.95,-1.19);
+  print('5/2 SINGLE SOLENOID VALVE',-2,1.36);
+  print('5/2 DOUBLE SOLENOID VALVE',2.64,-1.09);
+  for(const [x,z] of [[-1.95,-1.91],[-2,.66],[2.64,-1.81]]) {
+    voltagePair(x+1.44,z+.50);
+    // Only the double-solenoid valve (x>0) has a left coil; that one is Y1.
+    print(x>0?'Y2':'Y1',x+1.92,z+.50,.10,'left');
+    if(x>0) {
+      voltagePair(x-1.70,z+.50);
+      print('Y1',x-1.88,z+.50,.10,'right');
+    }
+  }
+
+  print('RELAY 1',1.23,-.95);
+  print('RELAY 2',2.56,-.95);
+  print('TIMER 1',4.26,-.95);
+  for(const [i,z] of [.36,1.22,2.02].entries()) {
+    print(['RELAY 1','RELAY 2','TIMER 1'][i],.69,z+.146,.09,'right');
+    print('24 V',.69,z,.081,'right');
+    print('0 V',.69,z+.29,.081,'right');
+    outline(.78,z+.108,.16,.077);
+    line([[.94,z+.146],[3.43,z+.146]],true);
+    for(const x of [2.10,3.26]) contactMark(x,z);
+  }
+
+  outline(-5.15,2.01,1.71,1.51);
+  print('24 V',-4.74,2.09,.09);
+  print('0 V',-3.98,2.09,.09);
+  print('POWER SUPPLY',-4.28,3.43);
+  outline(-2.87,1.50,2.07,2.16);
+  for(const x of [-2.45,-1.22]) {
+    print('24 V',x-.29,1.58,.08);
+    print('0 V',x+.29,1.58,.08);
+    contactMark(x,2.42);
+  }
+  print('PUSH BUTTON SWITCH',-1.84,3.52);
+  print('AIR DISTRIBUTION',2.51,3.58);
+  print('AIR SHUT-OFF',5.03,3.58);
+
+  // Soft contact shadows are baked onto the board in model coordinates.
+  const shadowMap=document.createElement('canvas');
+  shadowMap.width=shadowMap.height=1024;
+  let shade=shadowMap.getContext('2d');
+  const shadowScale=shadowMap.width/12;
+  shade.translate(shadowMap.width/2,shadowMap.height/2);
+  shade.scale(shadowScale,shadowScale);
+  function contactShadow(x,z,width,depth,opacity=.36) {
+    shade.save();
+    shade.translate(x+.045,z+.062);
+    shade.scale(width/2,depth/2);
+    const gradient=shade.createRadialGradient(0,0,.15,0,0,1);
+    gradient.addColorStop(0,'rgba(0,0,0,'+opacity+')');
+    gradient.addColorStop(.59,'rgba(0,0,0,'+opacity*.72+')');
+    gradient.addColorStop(1,'transparent');
+    shade.fillStyle=gradient;
+    shade.fillRect(-1,-1,2,2);
+    shade.restore();
+  }
+  for(const [x,z] of [[-2.32,-3.23],[-2.55,-.61],[2.25,-3.23]]) {
+    contactShadow(x,z,3.55,.98,.37);
+    for(const end of [-1,1]) contactShadow(x+end*1.04,z,.70,1.02);
+  }
+  for(const [x,z,width,depth] of [
+    [-1.95,-1.91,3.4,1.4],[-2,.66,3.4,1.4],[2.64,-1.81,3.8,1.45],
+    [-5,-2.65,.84,1.05],[-4.35,.07,2.25,.94],[-4.28,2.95,1.95,1.21],
+    [1.23,-.55,.92,.96],[2.56,-.55,.92,.96],[4.26,-.55,.95,.96],
+    [2.51,3.19,4.52,.85],[5.03,3.19,1.02,.78]
+  ]) contactShadow(x,z,width,depth,.48);
+  for(const x of [-2.45,-1.22]){
+    contactShadow(x,3.14,.87,.87);
+    contactShadow(x,1.77,.57,.57);
+  }
+  function uploadTexture(surface,name,unit) {
+    gl.activeTexture(gl.TEXTURE0+unit);
+    gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,surface);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.uniform1i(gl.getUniformLocation(program,name),unit);
+  }
+  uploadTexture(artwork,'panelInk',0);
+  uploadTexture(shadowMap,'contactShadows',1);
+
+  // Expansion panel artwork: a 12 × 12 unit sheet covering z −16.2 … −4.2.
+  const extInk=document.createElement('canvas');
+  extInk.width=extInk.height=2048;
+  ink=extInk.getContext('2d');
+  ink.translate(extInk.width/2,pixelsPerUnit*16.2);
+  ink.scale(pixelsPerUnit,pixelsPerUnit);
+  ink.fillStyle='#22282c';ink.strokeStyle='#42494e';ink.textBaseline='middle';
+  print('EXPANSION MODULE',-5.35,ext.top+.27,.1,'left');
+  for(const set of ext.cylSets){
+    const {cylinder:c,valve:v}=set;
+    print('DOUBLE-ACTING CYLINDER '+set.n,c.x,c.z-.6);
+    for(const [i,x] of set.reeds.entries()) {
+      const label='REED SWITCH '+(set.firstReed+i);
+      line([[x,set.reedZ],[x+.30,set.reedZ]]);
+      print(label,x+.15,set.reedZ+.24,.095);
+      print(label,c.x+(i?.47:-.48),c.z+.35,.09);
+    }
+    print('5/2 DOUBLE SOLENOID VALVE '+set.n,v.x,v.z+.72);
+    voltagePair(v.x+1.44,v.z+.50);
+    print('Y2',v.x+1.92,v.z+.50,.10,'left');
+    voltagePair(v.x-1.70,v.z+.50);
+    print('Y1',v.x-1.88,v.z+.50,.10,'right');
+  }
+  for(const r of ext.relays){
+    outline(r.ox,r.oz,3.3,1.6);
+    print(r.label,r.x,r.oz+1.47,.085);
+    print('24 V',r.coilX-.17,r.coilZ,.075,'right');
+    print('0 V',r.coilX-.17,r.coilZ+.29,.075,'right');
+    print('A1',r.coilX+.17,r.coilZ,.075,'left');
+    print('A2',r.coilX+.17,r.coilZ+.29,.075,'left');
+    r.sets.forEach(([x,z],i)=>{
+      contactMark(x,z);
+      print((i+1)+'1-'+(i+1)+'2-'+(i+1)+'4',x,z-.15,.068);
+    });
+    line([[r.coilX+.36,r.coilZ+.145],[r.ox+3.2,r.coilZ+.145]],true);
+  }
+  {
+    const p=ext.psu;
+    outline(p.x-.98,p.z-.62,1.96,2.72);
+    print('POWER SUPPLY 24 VDC',p.x,p.z-.48,.095);
+    print('+24 V',p.x,p.plusZ-.2,.075);
+    print('0 V',p.x,p.zeroZ+.2,.075);
+  }
+  outline(-1.92,-6.95,2.24,1.92);
+  for(const b of ext.buttons){
+    contactMark(b.x,b.contactZ);
+    print('PUSH BUTTON '+b.n,b.x,b.z+.45,.075);
+  }
+  print('PUSH BUTTON SWITCH',-.80,-6.78,.085);
+  const extShadowMap=document.createElement('canvas');
+  extShadowMap.width=extShadowMap.height=1024;
+  shade=extShadowMap.getContext('2d');
+  shade.translate(extShadowMap.width/2,shadowScale*16.2);
+  shade.scale(shadowScale,shadowScale);
+  for(const {cylinder:c,valve:v} of ext.cylSets){
+    contactShadow(c.x,c.z,3.55,.98,.37);
+    for(const end of [-1,1]) contactShadow(c.x+end*1.04,c.z,.70,1.02);
+    contactShadow(v.x,v.z,3.8,1.45,.48);
+  }
+  for(const r of ext.relays) contactShadow(r.x,r.z,.92,.96,.48);
+  contactShadow(ext.psu.x,ext.psu.z,1.95,1.21,.48);
+  for(const b of ext.buttons) contactShadow(b.x,b.z,.87,.87);
+  uploadTexture(extInk,'extInk',2);
+  uploadTexture(extShadowMap,'extShadows',3);
+
+  // Labels for the optional relay 1–2 contact sets 3–4, shown only while fitted.
+  const addonArt=document.createElement('canvas');
+  addonArt.width=addonArt.height=512;
+  ink=addonArt.getContext('2d');
+  const addonScale=addonArt.width/3;
+  ink.translate(-3.8*addonScale,.2*addonScale);
+  ink.scale(addonScale,addonScale);
+  ink.fillStyle='#22282c';ink.strokeStyle='#42494e';ink.textBaseline='middle';
+  for(const z of [.36,1.22]){
+    line([[3.43,z+.146],[5.62,z+.146]],true);
+    for(const [x,n] of addonSets){
+      contactMark(x,z);
+      print(n+'1-'+n+'2-'+n+'4',x,z-.13,.07);
+    }
+  }
+  outline(4.06,.12,1.69,1.38);
+  print('4CO ADD-ON',4.91,1.66,.075);
+  uploadTexture(addonArt,'addonInk',4);
+
+  const attributes=[['position',3,0],['normal',3,3],['color',3,6],['metal',1,9]]
+    .map(([name,size,offset])=>[gl.getAttribLocation(program,name),size,offset]);
+  for(const [a] of attributes) gl.enableVertexAttribArray(a);
+  function useBuffer(b) {
+    gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    for(const [a,size,offset] of attributes) gl.vertexAttribPointer(a,size,gl.FLOAT,false,40,offset*4);
+  }
+  const buffer=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.STATIC_DRAW);
+  const extBuffer=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,extBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(extMesh),gl.STATIC_DRAW);
+  // Whether the expansion panel is fitted; things on it are hidden and inert otherwise.
+  let expansion=false;
+  const addonBuffer=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,addonBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(addonMesh),gl.STATIC_DRAW);
+  // Whether relays 1–2 have their extra contact sets 3–4 fitted.
+  let relayAddon=false;
+  const present=thing=>(!thing.ext || expansion) && (!thing.addon || relayAddon);
+
+  // ---- Hoses and wires -------------------------------------------------
+  const portById=new Map(ports.map(p=>[p.id,p]));
+  let links=[];
+  const linkBuffer=gl.createBuffer();
+  let linkVertexCount=0;
+  const add=(a,b,s=1)=>a.map((v,i)=>v+b[i]*s);
+  const sub=(a,b)=>a.map((v,i)=>v-b[i]);
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const unit=a=>{const l=Math.hypot(...a)||1;return a.map(v=>v/l);};
+  function linkColor(link) {
+    if(link.kind==='air') return link.pressurized?'#14b4ff':'#6f93ad';
+    const [a,b]=[portById.get(link.a),portById.get(link.b)];
+    for(const c of [red,blue]) if(a.hex===c || b.hex===c) return c;
+    return '#2b3036';
+  }
+  function linkPath(link) {
+    const a=portById.get(link.a),b=portById.get(link.b);
+    // Wires leave the top of a banana plug; hoses leave the socket mouth.
+    const lead=link.kind==='air'?.02:.30;
+    const s=add(a.pos,a.dir,lead),e=add(b.pos,b.dir,lead);
+    const span=Math.hypot(e[0]-s[0],e[2]-s[2]);
+    const lift=.25+.16*span;
+    const c1=add(s,a.dir,lift),c2=add(e,b.dir,lift);
+    const points=[];
+    const steps=Math.max(16,Math.round(span*10));
+    if(link.kind==='air') points.push(add(a.pos,a.dir,-.06));
+    for(let i=0;i<=steps;i++){
+      const t=i/steps,u=1-t;
+      points.push([0,1,2].map(k=>u*u*u*s[k]+3*u*u*t*c1[k]+3*u*t*t*c2[k]+t*t*t*e[k]));
+    }
+    if(link.kind==='air') points.push(add(b.pos,b.dir,-.06));
+    return points;
+  }
+  function tube(points,radius,hex,metal,sides=10) {
+    const color=rgb(hex);
+    let normal=null,previous=null;
+    for(let i=0;i<points.length;i++){
+      const tangent=unit(sub(points[Math.min(i+1,points.length-1)],points[Math.max(i-1,0)]));
+      if(!normal) normal=unit(cross(tangent,Math.abs(tangent[1])>.9?[1,0,0]:[0,1,0]));
+      normal=unit(sub(normal,tangent.map(v=>v*dot(normal,tangent))));
+      const binormal=cross(tangent,normal);
+      const ring=Array.from({length:sides},(_,j)=>{
+        const angle=j*2*Math.PI/sides;
+        const n=add(normal.map(v=>v*Math.cos(angle)),binormal,Math.sin(angle));
+        return {p:add(points[i],n,radius),n};
+      });
+      if(previous) for(let j=0;j<sides;j++){
+        const k=(j+1)%sides;
+        triangle([previous[j].p,previous[k].p,ring[k].p],[previous[j].n,previous[k].n,ring[k].n],color,metal);
+        triangle([previous[j].p,ring[k].p,ring[j].p],[previous[j].n,ring[k].n,ring[j].n],color,metal);
+      }
+      previous=ring;
+    }
+  }
+  function plug(port,hex) {
+    const [x,y,z]=port.pos;
+    cylinder(x,y+.03,z,.047,.10,chrome,.85,'y',0,14);
+    cylinder(x,y+.17,z,.075,.20,hex,.18,'y',0,18);
+    cylinder(x,y+.285,z,.048,.04,hex,.18,'y',0,14);
+  }
+  function rebuildLinks() {
+    const geometry=[];
+    sink=geometry;
+    for(const link of links){
+      const hex=linkColor(link);
+      if(link.kind==='elec'){
+        plug(portById.get(link.a),hex);
+        plug(portById.get(link.b),hex);
+        link.path=linkPath(link);
+        tube(link.path,.03,hex,.25);
+      } else {
+        link.path=linkPath(link);
+        tube(link.path,.055,hex,.35,14);
+      }
+    }
+    sink=mesh;
+    gl.bindBuffer(gl.ARRAY_BUFFER,linkBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(geometry),gl.DYNAMIC_DRAW);
+    linkVertexCount=geometry.length/10;
+  }
+
+  // ---- Pneumatic simulation ---------------------------------------------
+  let airOn=false;
+  let airWarnings=[];
+  const fullStrokeMs=900, springReturnMs=700;
+  const energized=(v,key)=>v.manual[key]||v.elec[key];
+  for(const v of valves) v.elec={Y1:false,Y2:false};
+
+  // ---- Electrical simulation --------------------------------------------
+  const portOf=(device,name)=>{
+    const p=ports.find(q=>q.device===device && q.name===name);
+    if(!p) throw Error('Missing port '+device+' / '+name);
+    return p;
+  };
+  const changeover=(device,prefix='',n=1)=>({
+    com:portOf(device,prefix+'COM ('+n+'1)'),nc:portOf(device,prefix+'NC ('+n+'2)'),no:portOf(device,prefix+'NO ('+n+'4)')
+  });
+  let powerOn=false, electricWarnings=[];
+  // Two independent (isolated) 24 VDC supplies, each with its own switch and rails:
+  // main = rails '+' / '0', expansion = rails '+E' / '0E'. A wire can tie their 0 V together.
+  let extPowerOn=false;
+  const supplyPorts=(device,name)=>ports.filter(p=>p.device===device && p.name===name);
+  const psu={device:'แหล่งจ่ายไฟ 24 VDC'};
+  psu.plus=supplyPorts(psu.device,'+24 V');
+  psu.zero=supplyPorts(psu.device,'0 V');
+  const extPsu={device:'แหล่งจ่ายไฟ 24 VDC (แผงเสริม)'};
+  extPsu.plus=supplyPorts(extPsu.device,'+24 V');
+  extPsu.zero=supplyPorts(extPsu.device,'0 V');
+  const rails=[['+','0'],['+E','0E']];
+  const timerDelays=[1,2,3,5,10];
+  let timerDelayIndex=2;
+  // Relays and the on-delay timer: a coil plus two changeover contact sets.
+  // Relays 1–2 always carry sets 3–4 in the model; they are only reachable when fitted.
+  const relays=[['รีเลย์ 1',4],['รีเลย์ 2',4],['ไทเมอร์ 1',2],['รีเลย์ 3 (4CO)',4],['รีเลย์ 4 (4CO)',4],['รีเลย์ 5 (4CO)',4]].map(([device,setCount],i)=>({
+    device,timer:i===2,on:false,since:null,ext:ports.some(p=>p.device===device && p.ext),
+    a1:portOf(device,'คอยล์ A1 (24 V)'),a2:portOf(device,'คอยล์ A2 (0 V)'),
+    sets:Array.from({length:setCount},(_,n)=>changeover(device,'หน้าสัมผัสชุด '+(n+1)+' ',n+1))
+  }));
+  for(const led of relayLeds) led.relay=relays.find(r=>r.device===led.device);
+  const timer=relays[2];
+  const proximity={device:'พร็อกซิมิตี้เซนเซอร์ (PNP)',detecting:false,powered:false,active:false};
+  for(const k of ['24 V','0 V','OUTPUT']) proximity[k]=portOf(proximity.device,k);
+  const singleCylinder=cylinders.find(c=>c.single);
+  const reeds=reedLeds.map((led,i)=>({...led,device:'รีดสวิตช์ '+(i+1),
+    a:portOf('รีดสวิตช์ '+(i+1),'ขั้ว 1'),b:portOf('รีดสวิตช์ '+(i+1),'ขั้ว 2'),closed:false}));
+  // Anything with a changeover contact: push buttons, limit switches, relay contacts.
+  const switches=[
+    ...pushButtons.map(b=>({...changeover(b.owner),actuated:()=>b.pressed})),
+    ...limitSwitches.map((sw,i)=>({...changeover('ลิมิตสวิตช์ '+(i+1)),actuated:()=>sw.pressed})),
+    ...relays.flatMap(r=>r.sets.map(set=>({...set,actuated:()=>r.on})))
+  ];
+  // Loads light up / pull in when one terminal sits at +24 V and the other at 0 V.
+  const loads=[
+    ...lamps.map(l=>({a:portOf(l.owner,'24 V'),b:portOf(l.owner,'0 V'),set:on=>{l.on=on;}})),
+    ...valves.flatMap(v=>Object.entries(v.coils).map(([key,c])=>({a:c.plus,b:c.minus,set:on=>{v.elec[key]=on;}}))),
+    ...relays.map(r=>({a:r.a1,b:r.a2,set:on=>{r.coil=on;}}))
+  ];
+  function sensorInputs() {
+    for(const r of reeds) r.closed=r.end?r.cylinder.s>.97:r.cylinder.s<.03;
+    proximity.detecting=singleCylinder.s>.9;
+    return [...reeds.map(r=>r.closed),proximity.detecting,...limitSwitches.map(s=>s.pressed)].join();
+  }
+  function setPower(on) {
+    powerOn=on;
+    record('P',on?1:0);
+    if(on) electricWarnings=[];
+    sfx.click(.35);sfx.relay(on);
+    solveAll();
+    if(on && !powerOn) sfx.knock(.8); // tripped straight away on a short circuit
+  }
+  function setExtPower(on) {
+    if(on && !expansion) return;
+    if(on===extPowerOn) return;
+    extPowerOn=on;
+    record('Q',on?1:0);
+    if(on) electricWarnings=[];
+    sfx.click(.35);sfx.relay(on);
+    solveAll();
+    if(on && !extPowerOn) sfx.knock(.8);
+  }
+  function cycleTimerDelay() {
+    timerDelayIndex=(timerDelayIndex+1)%timerDelays.length;
+    say('ตั้งไทเมอร์ 1 ไว้ '+timerDelays[timerDelayIndex]+' วินาที');
+    solveAll();
+  }
+  function solveElectrical() {
+    sensorInputs();
+    const now=performance.now();
+    const wires=links.filter(l=>l.kind==='elec');
+    let stable=false;
+    for(let pass=0;pass<16 && !stable;pass++){
+      const parent={};
+      const find=k=>{
+        if(parent[k]===undefined) parent[k]=k;
+        while(parent[k]!==k){parent[k]=parent[parent[k]];k=parent[k];}
+        return k;
+      };
+      const join=(a,b)=>{parent[find(a)]=find(b);};
+      for(const [plus,zero] of rails){find(plus);find(zero);}
+      for(const w of wires) join(w.a,w.b);
+      if(powerOn){
+        for(const p of psu.plus) join(p.id,'+');
+        for(const p of psu.zero) join(p.id,'0');
+      }
+      if(extPowerOn){
+        for(const p of extPsu.plus) join(p.id,'+E');
+        for(const p of extPsu.zero) join(p.id,'0E');
+      }
+      for(const s of switches) join(s.com.id,(s.actuated()?s.no:s.nc).id);
+      for(const r of reeds) if(r.closed) join(r.a.id,r.b.id);
+      const at=(id,rail)=>find(id)===find(rail);
+      // Powered when a and b sit across the + and 0 V of the same supply.
+      const across=(a,b)=>rails.some(([plus,zero])=>at(a,plus)&&at(b,zero));
+      // PNP sensor: needs supply on its own terminals, then sources +24 V on OUTPUT.
+      const sensorRail=rails.find(([plus,zero])=>at(proximity['24 V'].id,plus)&&at(proximity['0 V'].id,zero));
+      proximity.powered=!!sensorRail;
+      proximity.active=proximity.powered && proximity.detecting;
+      if(proximity.active) join(proximity.OUTPUT.id,sensorRail[0]);
+      // A dead short trips the supply, just like a real overload cut-out.
+      const mainShort=powerOn && find('+')===find('0');
+      const extShort=extPowerOn && find('+E')===find('0E');
+      // Both supplies wired + to the other's 0 V in a loop also shorts them both.
+      const loopShort=powerOn && extPowerOn && find('+')===find('0E') && find('+E')===find('0');
+      if(mainShort || extShort || loopShort){
+        if(mainShort || loopShort) powerOn=false;
+        if(extShort || loopShort) extPowerOn=false;
+        electricWarnings=['ลัดวงจร! +24 V ต่อถึง 0 V โดยไม่ผ่านโหลด · '+
+          (mainShort||loopShort?(extShort||loopShort?'แหล่งจ่ายทั้งสองชุด':'แหล่งจ่ายแผงหลัก'):'แหล่งจ่ายแผงเสริม')+
+          'ตัดไฟแล้ว แก้สายแล้วเปิดสวิตช์ใหม่'];
+        pass=-1;continue;
+      }
+      for(const load of loads) load.set(across(load.a.id,load.b.id)||across(load.b.id,load.a.id));
+      stable=true;
+      for(const r of relays){
+        let on=r.coil;
+        if(r.timer){
+          if(!r.coil) r.since=null;
+          else if(r.since===null) r.since=now;
+          on=r.coil && now-r.since>=timerDelays[timerDelayIndex]*1000;
+        }
+        if(on!==r.on){r.on=on;stable=false;}
+      }
+    }
+    electricWarnings=electricWarnings.filter(w=>!w.startsWith('วงจรไม่เสถียร'));
+    if(!stable) electricWarnings.push('วงจรไม่เสถียร: รีเลย์ตัดต่อตัวเองวนไปมา · ตรวจหน้าสัมผัส NC ที่ป้อนคอยล์ตัวเอง');
+  }
+  let sensorState='';
+  const flowOf=v=>v.dual?v.position:(energized(v,'Y1')?'A':'B');
+  function machineState() {
+    return {
+      relays:relays.map(r=>r.on),
+      flows:valves.map(flowOf),
+      coils:valves.map(v=>Object.keys(v.coils).filter(k=>energized(v,k)).join()),
+      leaking:airWarnings.length>0
+    };
+  }
+  function solveAll() {
+    const before=machineState();
+    buildMoving(); // refreshes limit-switch contact state from the rod position
+    solveElectrical();
+    sensorState=sensorInputs();
+    updatePneumatics();
+    const after=machineState();
+    // Sounds for whatever just changed state.
+    after.relays.forEach((on,i)=>{if(on!==before.relays[i]) sfx.relay(on);});
+    after.flows.forEach((flow,i)=>{
+      if(flow!==before.flows[i]){sfx.solenoid();if(airOn) sfx.puff(.5);}
+      else if(after.coils[i]!==before.coils[i] && after.coils[i]) sfx.solenoid(.5);
+    });
+    sfx.leak(airOn && after.leaking);
+  }
+
+  // ---- Sound (synthesised with Web Audio; nothing to download) -----------
+  const sfx=(()=>{
+    let ctx=null, master=null, noise=null, hissGain=null, hissFilter=null, leakGain=null;
+    let enabled=true;
+    try {enabled=localStorage.getItem('electro-pneumatic-sound')!=='off';} catch {}
+    function init() {
+      if(ctx || !enabled) return ctx;
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return null;
+      ctx=new AC();
+      master=ctx.createGain();master.gain.value=.55;master.connect(ctx.destination);
+      noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
+      const data=noise.getChannelData(0);
+      for(let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
+      const loop=(type,freq,q)=>{
+        const src=ctx.createBufferSource();src.buffer=noise;src.loop=true;
+        const filter=ctx.createBiquadFilter();filter.type=type;filter.frequency.value=freq;filter.Q.value=q;
+        const gain=ctx.createGain();gain.gain.value=0;
+        src.connect(filter).connect(gain).connect(master);src.start();
+        return [gain,filter];
+      };
+      [hissGain,hissFilter]=loop('bandpass',2600,.8);
+      [leakGain]=loop('highpass',5200,.7);
+      return ctx;
+    }
+    const live=()=>{
+      if(!enabled || !ctx) return null;
+      if(ctx.state==='suspended') ctx.resume();
+      return ctx;
+    };
+    // Browsers only allow audio after a user gesture, so start it on the first press.
+    window.addEventListener('pointerdown',()=>{init();live();},{capture:true});
+    function burst(freq,duration,volume,type='bandpass',q=1.2) {
+      if(!live()) return;
+      const t=ctx.currentTime;
+      const src=ctx.createBufferSource();src.buffer=noise;
+      const filter=ctx.createBiquadFilter();filter.type=type;filter.frequency.value=freq;filter.Q.value=q;
+      const gain=ctx.createGain();
+      gain.gain.setValueAtTime(volume,t);
+      gain.gain.exponentialRampToValueAtTime(.0005,t+duration);
+      src.connect(filter).connect(gain).connect(master);
+      src.start(t,Math.random()*.5);src.stop(t+duration+.02);
+    }
+    function thump(freq,duration,volume) {
+      if(!live()) return;
+      const t=ctx.currentTime;
+      const osc=ctx.createOscillator();
+      osc.frequency.setValueAtTime(freq,t);
+      osc.frequency.exponentialRampToValueAtTime(freq*.45,t+duration);
+      const gain=ctx.createGain();
+      gain.gain.setValueAtTime(volume,t);
+      gain.gain.exponentialRampToValueAtTime(.0005,t+duration);
+      osc.connect(gain).connect(master);
+      osc.start(t);osc.stop(t+duration+.02);
+    }
+    const level=(gain,value,speed=.06)=>{if(gain && ctx) gain.gain.setTargetAtTime(enabled?value:0,ctx.currentTime,speed);};
+    return {
+      get enabled(){return enabled;},
+      set enabled(on){
+        enabled=on;
+        try {localStorage.setItem('electro-pneumatic-sound',on?'on':'off');} catch {}
+        if(on){init();live();}
+        level(hissGain,0,.02);level(leakGain,0,.02);
+      },
+      click:(volume=.25)=>burst(3800,.025,volume,'bandpass',2),
+      relay:on=>{burst(on?3000:2400,.03,.35,'bandpass',3);thump(on?420:340,.05,.12);},
+      solenoid:(volume=1)=>{thump(160,.09,.35*volume);burst(1400,.05,.3*volume,'bandpass',1.5);},
+      puff:(volume=1)=>burst(2200,.45,.32*volume,'highpass',.5),
+      knock:(volume=1)=>{thump(85,.14,.6*volume);burst(900,.04,.25*volume,'bandpass',1);},
+      hiss(amount,pitch=1){
+        if(!ctx) return;
+        level(hissGain,clamp(amount,0,1)*.16);
+        if(hissFilter) hissFilter.frequency.setTargetAtTime(1800+1600*pitch,ctx.currentTime,.1);
+      },
+      leak:on=>level(leakGain,on?.07:0,.15)
+    };
+  })();
+  function valvePosition(v) {
+    if(!v.dual) return energized(v,'Y1')?'A':'B';
+    const y1=energized(v,'Y1'),y2=energized(v,'Y2');
+    if(y1&&!y2) v.position='A';
+    else if(y2&&!y1) v.position='B';
+    return v.position;
+  }
+  function pressOverride(v,key) {
+    record('O',v.title+' '+key);
+    if(v.dual){
+      // Double-solenoid valves remember their position: a short pulse is enough.
+      v.manual[key]=true;
+      sfx.click(.2);
+      solveAll();
+      setTimeout(()=>{v.manual[key]=false;solveAll();},300);
+    } else {
+      v.manual[key]=!v.manual[key];
+      sfx.click(.2);
+      solveAll();
+    }
+  }
+  function setAir(on) {
+    airOn=on;
+    record('A',on?1:0);
+    airButton.setAttribute('aria-pressed',String(on));
+    airButton.textContent=on?'ลมหลัก: เปิด':'ลมหลัก: ปิด';
+    sfx.knock(.4);
+    if(on) sfx.puff(.8);
+    solveAll();
+  }
+  const speedSteps=[1,.75,.5,.25,.1];
+  function setSpeed(knob,factor) {
+    knob.factor=clamp(factor,.1,1);
+    buildMoving();showSimStatus();syncSpeedInputs();schedule();
+  }
+  function cycleSpeed(c,knob) {
+    const i=speedSteps.findIndex(s=>s<knob.factor-.001);
+    setSpeed(knob,i<0?speedSteps[0]:speedSteps[i]);
+    sfx.click(.15);
+    say(c.title+': ความเร็วตอน'+(knob.stroke==='extend'?'ยื่นออก':'หดกลับ')+' '+Math.round(knob.factor*100)+'%');
+  }
+  function updatePneumatics() {
+    // Union-find over ports: hoses and the valves' current internal passages join them.
+    const parent={};
+    const find=k=>{
+      if(parent[k]===undefined) parent[k]=k;
+      while(parent[k]!==k){parent[k]=parent[parent[k]];k=parent[k];}
+      return k;
+    };
+    const join=(a,b)=>{parent[find(a)]=find(b);};
+    find('SUPPLY');find('EXHAUST');
+    const air=links.filter(l=>l.kind==='air');
+    for(const l of air) join(l.a,l.b);
+    for(const o of airOutlets) join(o.id,airOn?'SUPPLY':'EXHAUST');
+    for(const v of valves){
+      const pos=valvePosition(v);
+      if(v.ways===3){
+        if(pos==='A') join(v.P.id,v.A.id); else join(v.A.id,'EXHAUST');
+      } else {
+        const [fed,vented]=pos==='A'?[v.A,v.B]:[v.B,v.A];
+        join(v.P.id,fed.id); join(vented.id,'EXHAUST');
+      }
+    }
+    const pressurized=id=>find(id)===find('SUPPLY');
+    for(const l of air) l.pressurized=pressurized(l.a);
+    for(const c of cylinders){
+      const cap=pressurized(c.cap.id), rod=c.rod?pressurized(c.rod.id):false;
+      c.capPressure=cap;c.rodPressure=rod;
+      if(c.single) c.drive=cap?1:-1;
+      else c.drive=cap&&!rod?1:rod&&!cap?-1:0;
+    }
+    const hosed=new Set(air.flatMap(l=>[l.a,l.b]));
+    airWarnings=[];
+    if(airOn && find('SUPPLY')===find('EXHAUST'))
+      airWarnings.push('ลมไหลทิ้งออกทางระบายของวาล์ว · ตรวจว่าต่อทางจ่ายลมเข้าพอร์ตทางออกของวาล์วหรือไม่');
+    for(const p of ports)
+      if(p.kind==='air' && !airOutlets.includes(p) && !hosed.has(p.id) && pressurized(p.id))
+        airWarnings.push('ลมรั่วออกที่ '+p.device+' · '+p.name+' (ยังไม่ได้เสียบสาย)');
+    rebuildLinks();
+    buildMoving();
+    showSimStatus();
+    schedule();
+  }
+  function stepSimulation(ms) {
+    let moving=false, hiss=0, pitch=0;
+    for(const c of cylinders){
+      if(!c.drive) continue;
+      // Spring return of the single-acting cylinder is not throttled.
+      const factor=c.single && c.drive<0?1:c.knobs[c.drive>0?'extend':'retract'].factor;
+      const rate=(c.single && c.drive<0?springReturnMs:fullStrokeMs)/factor;
+      const next=clamp(c.s+c.drive*ms/rate,0,1);
+      if(next!==c.s){
+        c.s=next;moving=true;
+        hiss+=.35+.65*factor;pitch=Math.max(pitch,factor);
+        if(next===0 || next===1) sfx.knock(.4+.6*factor);
+      }
+    }
+    sfx.hiss(Math.min(hiss,1.4),pitch);
+    if(moving) {
+      buildMoving();
+      // Rod reached a reed switch, limit switch or the proximity sensor: re-solve the circuit.
+      if(sensorInputs()!==sensorState) solveAll();
+      else showSimStatus();
+    }
+    if(timer.coil && !timer.on){
+      if(performance.now()-timer.since>=timerDelays[timerDelayIndex]*1000) solveAll();
+      else showSimStatus();
+      moving=true;
+    }
+    return moving;
+  }
+
+  const movingBuffer=gl.createBuffer();
+  let movingVertexCount=0;
+  function buildMoving() {
+    const geometry=[];
+    sink=geometry;
+    for(const c of cylinders){
+      if(!present(c)) continue;
+      const y=rodTip.height, tipCenter=c.x+c.side*(rodTip.offset+c.s*stroke);
+      const rodStart=c.x+c.side*1.0;
+      cylinder((rodStart+tipCenter)/2,y,c.z,.098,Math.abs(tipCenter-rodStart),chrome,.93,'x');
+      cylinder(tipCenter,y,c.z,rodTip.radius,rodTip.length,'#bfc6cb',.74,'x',0,48);
+      if(c.x===limitCylinder.x) for(const sw of limitSwitches) rollerArm(sw,tipCenter);
+      // Speed-control knobs: screwed further down = more throttled.
+      for(const knob of Object.values(c.knobs))
+        cylinder(knob.x,.85-.06*(1-knob.factor),knob.z,.10,.077,knob.factor<1?'#ffe9a8':white,.06,'y',0,12);
+    }
+    for(const v of valves) if(present(v)) for(const [key,coil] of Object.entries(v.coils)){
+      const on=energized(v,key);
+      const [x,y,z]=coil.button;
+      cylinder(x,on?y-.012:y,z,.054,.045,on?'#ff6b55':red,on?.6:0);
+    }
+    if(airOn) box(5.03,.55,3.19,.31,.14,.13,'#3b8f4e',.35);
+    else box(5.03,.55,3.19,.13,.14,.31,steel,.35);
+    // Electrical indicators.
+    box(-3.88,powerOn?.30:.32,2.96,.32,.14,.44,powerOn?'#ff5a46':'#8e2a24',powerOn?.3:0,0);
+    box(-3.88,.40,powerOn?2.86:3.06,.30,.03,.16,powerOn?'#ff7a68':'#a3332b');
+    if(expansion){
+      const {x,z}=ext.psu, rx=x+.40;
+      box(rx,extPowerOn?.30:.32,z,.32,.14,.44,extPowerOn?'#ff5a46':'#8e2a24',extPowerOn?.3:0,0);
+      box(rx,.40,extPowerOn?z-.10:z+.10,.30,.03,.16,extPowerOn?'#ff7a68':'#a3332b');
+    }
+    for(const b of pushButtons) if(present(b)) cylinder(b.x,b.pressed?.215:.256,b.z,.245,.09,b.hex,.16);
+    for(const l of lamps) cylinder(l.x,.245,l.z,.149,.075,l.on?l.lit:l.hex,l.on?.05:.32);
+    for(const {pos:[x,y,z],relay,ext} of relayLeds)
+      if(!ext || expansion) box(x,y,z,.20,.06,.30,relay.on?'#4dff95':'#145c3c');
+    cylinder(-5,.42,-2.96,.109,.12,proximity.active?'#ffc04d':'#a8541f',.14,'z');
+    for(const r of reeds){
+      if(!present(r.cylinder)) continue;
+      const [x,y,z]=r.pos;
+      box(x,y,z,.085,.085,.15,r.closed?'#7cc0ff':'#1d3f72');
+    }
+    sink=mesh;
+    gl.bindBuffer(gl.ARRAY_BUFFER,movingBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(geometry),gl.DYNAMIC_DRAW);
+    movingVertexCount=geometry.length/10;
+  }
+  const uniforms=Object.fromEntries(['eye','right','up','forward','scale','clipDepth','showInk','showAddon'].map(name=>
+    [name,gl.getUniformLocation(program,name)]));
+  const minDistance=10,maxDistance=50;
+  const near=.5,far=maxDistance+12;
+  gl.uniform2fv(uniforms.clipDepth,[(far+near)/(far-near),-2*near*far/(far-near)]);
+  gl.enable(gl.DEPTH_TEST);
+  const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+  const home=[.34,.94,21.9];
+  let showInk=true;
+  let [yaw,pitch,distance]=home;
+  let zoomTarget=distance;
+  let target=[0,0,0];
+  let zoomAnchor=null;
+  let lastFrame;
+  let pending=false;
+  let view=null;
+  function schedule(){
+    if(pending) return;
+    pending=true;
+    requestAnimationFrame(draw);
+  }
+  function cameraAxes(){
+    const cp=Math.cos(pitch),sp=Math.sin(pitch),cy=Math.cos(yaw),sy=Math.sin(yaw);
+    const out=[sy*cp,sp,cy*cp];
+    return {out,right:[cy,0,-sy],up:[-sy*sp,cp,-cy*sp],forward:out.map(v=>-v)};
+  }
+  function draw(now){
+    pending=false;
+    const elapsed=lastFrame===undefined?16:Math.min(now-lastFrame,32);
+    lastFrame=now;
+    const oldDistance=distance;
+    distance+=(zoomTarget-distance)*(1-Math.exp(-elapsed/52));
+    if(Math.abs(zoomTarget-distance)>.005) schedule();
+    else distance=zoomTarget;
+    if(zoomAnchor) {
+      target=target.map((v,i)=>v+zoomAnchor[i]*(oldDistance-distance));
+      if(distance===zoomTarget) zoomAnchor=null;
+    }
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    if(!w || !h) return;
+    const density=clamp(devicePixelRatio,1.5,2);
+    const width=Math.round(w*density),height=Math.round(h*density);
+    if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
+    const {out,right,up,forward}=cameraAxes();
+    const eye=target.map((v,i)=>v+out[i]*distance);
+    const size=Math.min(w,h*1.32);
+    const scale=[2.68*size/w,2.68*size/h];
+    for(const [name,value] of Object.entries({eye,right,up,forward})) gl.uniform3fv(uniforms[name],value);
+    gl.uniform2fv(uniforms.scale,scale);
+    gl.uniform1i(uniforms.showInk,Number(showInk));
+    gl.uniform1i(uniforms.showAddon,Number(relayAddon));
+    gl.viewport(0,0,width,height);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    if(stepSimulation(elapsed)) schedule();
+    useBuffer(buffer);
+    gl.drawArrays(gl.TRIANGLES,0,mesh.length/10);
+    if(expansion){
+      useBuffer(extBuffer);
+      gl.drawArrays(gl.TRIANGLES,0,extMesh.length/10);
+    }
+    if(relayAddon){
+      useBuffer(addonBuffer);
+      gl.drawArrays(gl.TRIANGLES,0,addonMesh.length/10);
+    }
+    useBuffer(movingBuffer);
+    gl.drawArrays(gl.TRIANGLES,0,movingVertexCount);
+    if(linkVertexCount){
+      useBuffer(linkBuffer);
+      gl.drawArrays(gl.TRIANGLES,0,linkVertexCount);
+    }
+    view={eye,right,up,forward,scale,w,h};
+    drawOverlay();
+  }
+  function screenOffset(x,y,rect,{right,up}=cameraAxes()) {
+    const factor=2/(2.68*Math.min(rect.width,rect.height*1.32));
+    return right.map((v,i)=>(x*v-y*up[i])*factor);
+  }
+  const areaButton=document.querySelector('#area-zoom');
+  const selection=document.querySelector('#selection');
+  const guide=document.querySelector('#guide');
+  const defaultGuide=guide.textContent;
+  let selecting=false;
+  let drag;
+  function setSelectionMode(enabled) {
+    selecting=enabled;
+    if(drag?.area) drag=undefined;
+    selection.hidden=true;
+    canvas.parentElement.classList.toggle('selecting',enabled);
+    areaButton.setAttribute('aria-pressed',String(enabled));
+    guide.textContent=enabled?'ลากกรอบรอบบริเวณที่จะซูม · กด Esc เพื่อยกเลิก':defaultGuide;
+  }
+  function areaBounds(e) {
+    const rect=canvas.getBoundingClientRect();
+    const x=clamp(e.clientX-rect.left,0,rect.width);
+    const y=clamp(e.clientY-rect.top,0,rect.height);
+    const startX=clamp(drag.originX-rect.left,0,rect.width);
+    const startY=clamp(drag.originY-rect.top,0,rect.height);
+    return {rect,left:Math.min(startX,x),top:Math.min(startY,y),width:Math.abs(startX-x),height:Math.abs(startY-y)};
+  }
+  canvas.addEventListener('pointerdown',e=>{
+    if(!e.isPrimary || (e.button!==0 && (selecting || e.button!==2))) return;
+    canvas.focus({preventScroll:true});
+    canvas.setPointerCapture(e.pointerId);
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,originX:e.clientX,originY:e.clientY,zoom:e.button===2,area:selecting};
+    if(e.button===0 && !selecting){
+      // Push buttons act while the mouse is held down, like the real thing.
+      const hit=pick(e);
+      if(hit?.momentary){drag.held=hit;hit.down();}
+    }
+  });
+  function releaseHeld() {
+    if(drag?.held){const held=drag.held;drag.held=null;held.up();}
+  }
+  canvas.addEventListener('pointermove',e=>{
+    setMouse(e);
+    if(drag?.id!==e.pointerId) {hover(e);return;}
+    if(drag.held) return;
+    if(drag.area) {
+      const {left,top,width,height}=areaBounds(e);
+      selection.hidden=false;
+      Object.assign(selection.style,{left:left+'px',top:top+'px',width:width+'px',height:height+'px'});
+      return;
+    }
+    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(drag.zoom) {
+      zoom(Math.exp(clamp(dy,-100,100)*.009),drag.originX,drag.originY);
+    } else {
+      zoomTarget=distance;
+      zoomAnchor=null;
+      if(e.ctrlKey) {
+        const offset=screenOffset(dx,dy,canvas.getBoundingClientRect());
+        target=target.map((v,i)=>v-distance*offset[i]);
+      } else {
+        yaw-=dx*.009;
+        pitch=clamp(pitch+dy*.009,.12,1.565);
+      }
+    }
+    drag.x=e.clientX;drag.y=e.clientY;schedule();
+  });
+  canvas.addEventListener('pointerup',e=>{
+    if(drag?.id!==e.pointerId) return;
+    if(drag.held) {releaseHeld();return;}
+    if(!drag.area) {
+      const moved=Math.hypot(e.clientX-drag.originX,e.clientY-drag.originY);
+      if(!drag.zoom && moved<5) handlePortClick(e);
+      return;
+    }
+    const {rect,left,top,width,height}=areaBounds(e);
+    selection.hidden=true;
+    if(width<8 || height<8) return;
+    const offset=screenOffset(left+(width-rect.width)/2,top+(height-rect.height)/2,rect);
+    target=target.map((v,i)=>v+distance*offset[i]);
+    zoomTarget=distance;
+    zoom(Math.max(width/rect.width,height/rect.height)/.88);
+    setSelectionMode(false);
+  });
+  canvas.addEventListener('lostpointercapture',()=>{releaseHeld();drag=undefined;selection.hidden=true;});
+  canvas.addEventListener('pointerleave',()=>{if(!drag){hovered=null;hoveredLink=null;mouse=null;drawOverlay();}});
+
+  // ---- Wiring interaction ----------------------------------------------
+  const overlay=document.querySelector('#overlay');
+  const tip=document.querySelector('#tip');
+  const statusLine=document.querySelector('#status');
+  const linkList=document.querySelector('#links');
+  const defaultStatus=statusLine.textContent;
+  const storageKey='electro-pneumatic-links-v1';
+  let armed=null, hovered=null, mouse=null, highlighted=null;
+  const label=p=>p.device+' · '+p.name;
+  function project(p) {
+    const delta=sub(p,view.eye);
+    const depth=dot(delta,view.forward);
+    return [(dot(delta,view.right)*view.scale[0]/depth+1)/2*view.w,
+            (1-dot(delta,view.up)*view.scale[1]/depth)/2*view.h,depth];
+  }
+  function setMouse(e) {
+    const rect=canvas.getBoundingClientRect();
+    mouse=[e.clientX-rect.left,e.clientY-rect.top];
+  }
+  function pick(e) {
+    if(!view) return null;
+    setMouse(e);
+    let best=null,bestScore=Infinity;
+    for(const p of [...ports,...controls]){
+      if(!present(p)) continue;
+      const [x,y,depth]=project(p.pos);
+      const d=Math.hypot(x-mouse[0],y-mouse[1]);
+      const reach=Math.max(9,Math.min(20,260/depth));
+      if(d<reach && d+depth*.2<bestScore){best=p;bestScore=d+depth*.2;}
+    }
+    return best;
+  }
+  // Hit-test hoses and wires along their projected centre line.
+  function pickLink() {
+    if(!view || !mouse) return null;
+    let best=null,bestDistance=Infinity;
+    for(const link of links){
+      if(!link.path) continue;
+      const pts=link.path.map(project);
+      const reach=link.kind==='air'?8:7;
+      for(let i=1;i<pts.length;i++){
+        const [ax,ay]=pts[i-1],[bx,by]=pts[i];
+        const dx=bx-ax,dy=by-ay,len=dx*dx+dy*dy||1;
+        const t=clamp(((mouse[0]-ax)*dx+(mouse[1]-ay)*dy)/len,0,1);
+        const d=Math.hypot(mouse[0]-ax-t*dx,mouse[1]-ay-t*dy);
+        if(d<reach && d<bestDistance){best=link;bestDistance=d;}
+      }
+    }
+    return best;
+  }
+  let hoveredLink=null;
+  function hover(e) {
+    if(selecting) {hovered=null;hoveredLink=null;canvas.style.cursor='';drawOverlay();return;}
+    const p=pick(e);
+    hovered=p;
+    // Ports and controls win over a wire passing nearby; no wire picking mid-connection.
+    hoveredLink=!p && !armed?pickLink():null;
+    canvas.style.cursor=p||hoveredLink?'pointer':'';
+    drawOverlay();
+  }
+  function showTip(x,y,title,detail) {
+    tip.hidden=false;
+    tip.style.left=x+'px';tip.style.top=y+'px';
+    tip.replaceChildren(title);
+    const small=document.createElement('small');
+    small.textContent=detail;
+    tip.append(small);
+  }
+  function say(text,warn=false) {
+    statusLine.textContent=text;
+    statusLine.classList.toggle('warn',warn);
+  }
+  function circle(p,r,stroke,fill='none',width=2) {
+    const [x,y]=project(p.pos);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${width}"/>`;
+  }
+  function drawOverlay() {
+    if(!view) return;
+    // Soft glow over anything lit: lamps, relay LEDs, sensor LEDs, energised coils.
+    let svg='<defs><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".75"/>'+
+      '<stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>';
+    const glow=(pos,hex,size)=>{
+      const [x,y,depth]=project(pos);
+      const r=size*260/depth;
+      svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="url(#glow)" style="color:${hex}"/>`;
+    };
+    for(const l of lamps) if(l.on) glow([l.x,.29,l.z],l.lit,.45);
+    for(const led of relayLeds) if(present(led) && led.relay.on) glow(led.pos,'#4dff95',.22);
+    if(proximity.active) glow([-5,.42,-3.03],'#ffc04d',.25);
+    for(const r of reeds) if(r.closed && present(r.cylinder)) glow(r.pos,'#7cc0ff',.18);
+    for(const v of valves) if(present(v)) for(const [key,c] of Object.entries(v.coils)) if(v.elec[key]) glow(c.button,'#ff6b55',.2);
+    if(powerOn) glow([-3.88,.40,2.96],'#ff5a46',.25);
+    if(extPowerOn && expansion) glow([ext.psu.x+.40,.40,ext.psu.z],'#ff5a46',.25);
+    if(armed){
+      for(const p of ports) if(p!==armed && p.kind===armed.kind && present(p)) svg+=circle(p,4,'#ffffffaa','#84d5ff66',1);
+      const [x,y]=project(armed.pos);
+      if(mouse) svg+=`<line x1="${x}" y1="${y}" x2="${mouse[0]}" y2="${mouse[1]}" stroke="#ffd166" stroke-width="2" stroke-dasharray="6 4"/>`;
+      svg+=circle(armed,10,'#ffd166','#ffd16633',2.5);
+    }
+    if(highlighted) for(const id of [highlighted.a,highlighted.b]) svg+=circle(portById.get(id),11,'#ffd166','#ffd16633',2.5);
+    if(hovered){
+      const control=hovered.kind==='control';
+      const ok=control || !armed || hovered===armed || hovered.kind===armed.kind;
+      svg+=circle(hovered,9,control?'#ffd166':ok?'#84d5ff':'#ff7b6b','#ffffff22',2.5);
+      const [x,y]=project(hovered.pos);
+      const hint=typeof hovered.hint==='function'?hovered.hint():hovered.hint;
+      showTip(x,y,hovered.name,hovered.device+' · '+(control?hint:hovered.kind==='air'?'พอร์ตลม':'ขั้วไฟฟ้า'));
+    } else if(hoveredLink && links.includes(hoveredLink) && mouse){
+      const points=hoveredLink.path.map(p=>project(p).slice(0,2).join(',')).join(' ');
+      svg+=`<polyline points="${points}" fill="none" stroke="#ff7b6b" stroke-width="7" stroke-opacity=".55" stroke-linecap="round" stroke-linejoin="round"/>`;
+      for(const id of [hoveredLink.a,hoveredLink.b]) svg+=circle(portById.get(id),8,'#ff7b6b','#ff7b6b33',2);
+      showTip(mouse[0],mouse[1]-6,'คลิกเพื่อลบ'+(hoveredLink.kind==='air'?'สายลม':'สายไฟ'),
+        label(portById.get(hoveredLink.a))+'  ↔  '+label(portById.get(hoveredLink.b)));
+    } else tip.hidden=true;
+    overlay.innerHTML=svg;
+  }
+  function handlePortClick(e) {
+    if(selecting) return;
+    const p=pick(e);
+    if(!p){
+      if(armed){armed=null;say(defaultStatus);drawOverlay();return;}
+      const link=pickLink();
+      if(link) removeLink(link);
+      return;
+    }
+    if(p.kind==='control'){p.action?.();drawOverlay();return;}
+    if(!armed){
+      armed=p;
+      say('เลือก '+label(p)+' แล้ว · คลิกปลายอีกด้าน (Esc เพื่อยกเลิก)');
+    } else if(p===armed){
+      armed=null;say(defaultStatus);
+    } else connect(armed,p);
+    drawOverlay();
+  }
+  function connect(a,b) {
+    if(viewOnlyBlocked()) {armed=null;return;}
+    if(a.kind!==b.kind){
+      say(a.kind==='air'?'ต่อสายลมเข้ากับขั้วไฟฟ้าไม่ได้ · เลือกพอร์ตลม':'ต่อสายไฟเข้ากับพอร์ตลมไม่ได้ · เลือกขั้วไฟฟ้า',true);
+      return;
+    }
+    if(links.some(l=>(l.a===a.id&&l.b===b.id)||(l.a===b.id&&l.b===a.id))){
+      say('สองจุดนี้ต่อกันอยู่แล้ว',true);return;
+    }
+    if(a.kind==='air'){
+      const busy=[a,b].find(p=>links.some(l=>l.a===p.id||l.b===p.id));
+      if(busy){say('พอร์ตลม '+label(busy)+' มีสายอยู่แล้ว · หนึ่งพอร์ตเสียบได้หนึ่งสาย',true);return;}
+    }
+    remember();
+    links.push({a:a.id,b:b.id,kind:a.kind});
+    record('+',[a.id,b.id,a.kind]);
+    armed=null;
+    say((a.kind==='air'?'ต่อสายลม ':'ต่อสายไฟ ')+label(a)+' → '+label(b));
+    linksChanged();
+  }
+  const airButton=document.querySelector('#air');
+  airButton.onclick=()=>setAir(!airOn);
+  const soundButton=document.querySelector('#sound');
+  function showSound() {
+    soundButton.setAttribute('aria-pressed',String(sfx.enabled));
+    soundButton.textContent=sfx.enabled?'🔊 เสียง: เปิด':'🔇 เสียง: ปิด';
+  }
+  soundButton.onclick=()=>{sfx.enabled=!sfx.enabled;showSound();if(sfx.enabled) sfx.click(.3);};
+  showSound();
+  // Speed sliders, one per throttle, kept in step with the knobs on the model.
+  const speedPanel=document.querySelector('#speeds');
+  const speedInputs=[];
+  for(const c of cylinders){
+    const row=document.createElement('div');
+    row.className='speed-row';
+    if(c.ext) {row.dataset.ext='';row.hidden=true;}
+    const name=document.createElement('span');
+    name.className='speed-name';name.textContent=c.title;
+    row.append(name);
+    for(const stroke of ['extend','retract']){
+      const knob=c.knobs[stroke];
+      const wrap=document.createElement('label');
+      if(!knob){
+        wrap.className='speed-fixed';
+        wrap.textContent='หดกลับ: สปริงดัน (ปรับไม่ได้)';
+        row.append(wrap);continue;
+      }
+      const caption=document.createElement('span');
+      const input=document.createElement('input');
+      Object.assign(input,{type:'range',min:10,max:100,step:5,value:100});
+      input.oninput=()=>setSpeed(knob,input.value/100);
+      speedInputs.push({knob,input,caption,stroke});
+      wrap.append(caption,input);
+      row.append(wrap);
+    }
+    speedPanel.append(row);
+  }
+  function syncSpeedInputs() {
+    for(const {knob,input,caption,stroke} of speedInputs){
+      input.value=Math.round(knob.factor*100);
+      caption.textContent=(stroke==='extend'?'ยื่นออก ':'หดกลับ ')+input.value+'%';
+    }
+  }
+  syncSpeedInputs();
+  const powerButton=document.querySelector('#power');
+  powerButton.onclick=()=>setPower(!powerOn);
+  const extPowerButton=document.querySelector('#ext-power');
+  extPowerButton.onclick=()=>setExtPower(!extPowerOn);
+  const simLine=document.querySelector('#sim');
+  function showSimStatus() {
+    const motion=c=>c.s>=1?'ยื่นสุด':c.s<=0?'หดสุด':c.drive>0?'กำลังยื่นออก…':c.drive<0?'กำลังหดกลับ…':'ค้างกลางช่วงชัก';
+    const rows=[
+      airOn?'🟢 ลมหลักเปิด':'⚪ ลมหลักปิด · คลิกคันโยก AIR SHUT-OFF หรือปุ่ม "ลมหลัก"',
+      powerOn?'🔴 ไฟ 24 VDC เปิด':'⚪ ไฟ 24 VDC ปิด · คลิกสวิตช์แดงที่ POWER SUPPLY หรือปุ่ม "ไฟ 24 V"'
+    ];
+    if(expansion) rows.push(extPowerOn?'🔴 ไฟ 24 VDC แผงเสริมเปิด':'⚪ ไฟ 24 VDC แผงเสริมปิด · คลิกสวิตช์แดงที่ POWER SUPPLY ของแผงเสริม หรือปุ่ม "ไฟแผงเสริม"');
+    const hosedPorts=new Set(links.filter(l=>l.kind==='air').flatMap(l=>[l.a,l.b]));
+    for(const c of cylinders) if(present(c)){
+      // A double-acting cylinder with only one port hosed can be pushed one way but
+      // nothing brings it back: say so, it is the most common wiring slip.
+      const missing=[c.cap,c.rod].filter(p=>p && !hosedPorts.has(p.id));
+      const note=!c.single && missing.length===1 && hosedPorts.has((c.cap===missing[0]?c.rod:c.cap).id)
+        ?' (ยังไม่ได้ต่อสายลมที่'+missing[0].name+' จึง'+(missing[0]===c.rod?'หดกลับ':'ยื่นออก')+'ไม่ได้)':'';
+      rows.push(c.title+': '+motion(c)+note);
+    }
+    for(const v of valves){
+      if(!present(v)) continue;
+      const pos=v.position==='A' || (!v.dual && (v.manual.Y1||v.elec.Y1));
+      const flow=v.ways===3?(pos?'P→A':'A ระบายทิ้ง'):(pos?'P→A, B ระบายทิ้ง':'P→B, A ระบายทิ้ง');
+      const coils=Object.keys(v.coils).filter(k=>energized(v,k));
+      rows.push(v.title+': '+flow+(coils.length?' (คอยล์ '+coils.join('+')+' มีไฟ)':''));
+    }
+    for(const r of relays){
+      if(!present(r)) continue;
+      if(r.timer){
+        const total=timerDelays[timerDelayIndex];
+        const counting=r.coil && !r.on ? ' (นับ '+((performance.now()-r.since)/1000).toFixed(1)+' / '+total+' วินาที)':'';
+        rows.push(r.device+' ['+total+' วินาที]: '+(r.on?'ทำงาน':r.coil?'กำลังหน่วงเวลา'+counting:'ไม่ทำงาน'));
+      } else rows.push(r.device+': '+(r.on?'ทำงาน':'ไม่ทำงาน'));
+    }
+    if(proximity.powered) rows.push('เซนเซอร์: '+(proximity.active?'ตรวจพบชิ้นงาน':'ไม่พบ'));
+    simLine.replaceChildren(...rows.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
+    powerButton.setAttribute('aria-pressed',String(powerOn));
+    powerButton.textContent=powerOn?'ไฟ 24 V: เปิด':'ไฟ 24 V: ปิด';
+    extPowerButton.hidden=!expansion;
+    extPowerButton.setAttribute('aria-pressed',String(extPowerOn));
+    extPowerButton.textContent=extPowerOn?'ไฟแผงเสริม: เปิด':'ไฟแผงเสริม: ปิด';
+    for(const w of [...electricWarnings,...airWarnings]){
+      const li=document.createElement('li');
+      li.className='warn';li.textContent='⚠ '+w;
+      simLine.append(li);
+    }
+  }
+  // ---- Expansion panel: fit / remove --------------------------------------
+  const extButton=document.querySelector('#expansion');
+  const touchesExt=l=>portById.get(l.a).ext || portById.get(l.b).ext;
+  function setExpansion(on,{quiet=false}={}) {
+    let removed=0;
+    if(!on && links.some(touchesExt)){
+      // As with "clear all": no confirm() dialog, undo restores the panel and its wires.
+      removed=links.filter(touchesExt).length;
+      remember();
+      links=links.filter(l=>!touchesExt(l));
+      record('L',links.map(linkTuple));
+    }
+    if(!on && extPowerOn) setExtPower(false);
+    if(on!==expansion) record('X',on?1:0);
+    expansion=on;
+    extButton.setAttribute('aria-pressed',String(on));
+    extButton.textContent=on?'− ถอดแผงเสริม':'＋ เพิ่มแผงเสริม';
+    for(const row of speedPanel.querySelectorAll('[data-ext]')) row.hidden=!on;
+    try {localStorage.setItem('electro-pneumatic-expansion',on?'on':'off');} catch {}
+    if(armed?.ext) armed=null;
+    hovered=null;hoveredLink=null;
+    if(!quiet){
+      say(on?'เพิ่มแผงเสริมแล้ว: กระบอกสูบ 2 ชุด (รีดสวิตช์ 3–6, วาล์ว 5/2 โซลินอยด์คู่ 2 ตัว), รีเลย์ 3–5 (4CO), แหล่งจ่ายไฟ 24 VDC (สวิตช์แยก) และปุ่มกด 3–4':
+        'ถอดแผงเสริมแล้ว'+(removed?' พร้อมสายที่ต่ออยู่ '+removed+' เส้น · กด "เลิกทำ" เพื่อนำกลับมา':''));
+      sfx.knock(.5);
+    }
+    setView(homeView());
+    linksChanged();
+  }
+  extButton.onclick=()=>{if(!viewOnlyBlocked()) setExpansion(!expansion);};
+  // ---- Relay 1–2 extra contact sets 3–4: fit / remove ---------------------
+  const addonButton=document.querySelector('#relay-addon');
+  const touchesAddon=l=>portById.get(l.a).addon || portById.get(l.b).addon;
+  function setRelayAddon(on,{quiet=false}={}) {
+    let removed=0;
+    if(!on && links.some(touchesAddon)){
+      removed=links.filter(touchesAddon).length;
+      remember();
+      links=links.filter(l=>!touchesAddon(l));
+      record('L',links.map(linkTuple));
+    }
+    if(on!==relayAddon) record('Y',on?1:0);
+    relayAddon=on;
+    addonButton.setAttribute('aria-pressed',String(on));
+    addonButton.textContent=on?'− หน้าสัมผัสรีเลย์ 1–2 (4CO)':'＋ หน้าสัมผัสรีเลย์ 1–2 (4CO)';
+    try {localStorage.setItem('electro-pneumatic-relay-addon',on?'on':'off');} catch {}
+    if(armed?.addon) armed=null;
+    hovered=null;hoveredLink=null;
+    if(!quiet){
+      say(on?'เพิ่มหน้าสัมผัสชุด 3–4 (31-32-34, 41-42-44) ให้รีเลย์ 1 และ 2 แล้ว':
+        'เอาหน้าสัมผัสชุด 3–4 ของรีเลย์ 1–2 ออกแล้ว'+(removed?' พร้อมสายที่ต่ออยู่ '+removed+' เส้น · กด "เลิกทำ" เพื่อนำกลับมา':''));
+      sfx.click(.3);
+    }
+    linksChanged();
+  }
+  addonButton.onclick=()=>{if(!viewOnlyBlocked()) setRelayAddon(!relayAddon);};
+  function linksChanged() {
+    // Undo or a saved layout may bring back wires on the expansion panel: fit it.
+    if(!expansion && links.some(touchesExt)) {setExpansion(true,{quiet:true});return;}
+    if(!relayAddon && links.some(touchesAddon)) {setRelayAddon(true,{quiet:true});return;}
+    solveAll();
+    try {localStorage.setItem(storageKey,JSON.stringify(links));} catch {}
+    linkList.innerHTML='';
+    links.forEach((link,i)=>{
+      const li=document.createElement('li');
+      const swatch=document.createElement('span');
+      swatch.className='swatch';
+      swatch.style.background=linkColor(link);
+      const text=document.createElement('span');
+      text.className='text';
+      text.textContent=label(portById.get(link.a))+'  ↔  '+label(portById.get(link.b));
+      text.title=text.textContent;
+      const remove=document.createElement('button');
+      remove.textContent='✕';
+      remove.setAttribute('aria-label','ลบสาย '+text.textContent);
+      remove.onclick=()=>removeLink(link);
+      li.onmouseenter=()=>{highlighted=link;drawOverlay();};
+      li.onmouseleave=()=>{highlighted=null;drawOverlay();};
+      li.append(swatch,text,remove);
+      linkList.append(li);
+    });
+    schedule();
+  }
+  // Undo history: a snapshot of the wiring before each change.
+  const history=[];
+  function remember() {
+    history.push(links.map(({a,b,kind})=>({a,b,kind})));
+    if(history.length>100) history.shift();
+  }
+  function removeLink(link) {
+    if(viewOnlyBlocked()) return;
+    remember();
+    links=links.filter(l=>l!==link);
+    record('-',[link.a,link.b]);
+    highlighted=null;hoveredLink=null;
+    say('ลบ'+(link.kind==='air'?'สายลม ':'สายไฟ ')+label(portById.get(link.a))+' ↔ '+label(portById.get(link.b))+' แล้ว · กด "เลิกทำ" (Ctrl+Z) เพื่อนำกลับมา');
+    linksChanged();
+  }
+  document.querySelector('#undo').onclick=()=>{
+    if(viewOnlyBlocked()) return;
+    if(!history.length){say('ไม่มีอะไรให้เลิกทำ',true);return;}
+    links=history.pop();armed=null;hoveredLink=null;highlighted=null;
+    record('L',links.map(linkTuple));
+    say('เลิกทำแล้ว');linksChanged();
+  };
+  document.querySelector('#clear').onclick=()=>{
+    // No confirm() dialog: embedded browsers block it (it returns false at once).
+    // "Undo" brings everything back instead.
+    if(viewOnlyBlocked()) return;
+    if(!links.length){say('ยังไม่มีสายให้ล้าง',true);return;}
+    const count=links.length;
+    remember();
+    links=[];armed=null;hoveredLink=null;
+    record('L',[]);
+    say('ล้างสายทั้งหมด '+count+' เส้นแล้ว · กด "เลิกทำ" (Ctrl+Z) เพื่อนำกลับมา');
+    linksChanged();
+  };
+  // ---- Student work: identity, signed step log, save / open ---------------
+  // work:    the active session {student,sessionId,deviceId,startedAt,log,chain}
+  // viewing: a file opened read-only, plus a backup of the board to restore after
+  let work=null, viewing=null, replaying=false;
+  const workKey='electro-pneumatic-work-session';
+  const randomId=()=>Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');
+  const deviceId=(()=>{
+    let id=null;
+    try {id=localStorage.getItem('electro-pneumatic-device');} catch {}
+    if(!id){id=randomId();try {localStorage.setItem('electro-pneumatic-device',id);} catch {}}
+    return id;
+  })();
+  const linkTuple=l=>[l.a,l.b,l.kind];
+  const workUi={
+    start:document.querySelector('#work-start'),active:document.querySelector('#work-active'),
+    view:document.querySelector('#work-view'),id:document.querySelector('#work-id'),
+    name:document.querySelector('#work-name'),info:document.querySelector('#work-info'),
+    viewInfo:document.querySelector('#view-info'),resume:document.querySelector('#view-resume'),
+    file:document.querySelector('#work-file'),msg:document.querySelector('#work-msg'),
+    end:document.querySelector('#work-end')
+  };
+  function workSay(text,warn=false) {
+    workUi.msg.textContent=text;
+    workUi.msg.classList.toggle('warn',warn);
+  }
+  // Every change of wiring or test action becomes one signed step.
+  function record(code,data=0) {
+    if(!work || replaying || viewing) return;
+    const entry=[Date.now()-Date.parse(work.startedAt),code,data];
+    work.chain=WorkFile.step(work.chain,entry);
+    work.log.push(entry);
+    persistWork();
+    showWork();
+  }
+  function persistWork() {
+    try {
+      if(work) localStorage.setItem(workKey,JSON.stringify(work));
+      else localStorage.removeItem(workKey);
+    } catch {}
+  }
+  const fmtTime=iso=>new Date(iso).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});
+  function showWork() {
+    workUi.start.hidden=!!work || !!viewing;
+    workUi.active.hidden=!work || !!viewing;
+    workUi.view.hidden=!viewing;
+    if(work) workUi.info.textContent='👤 '+work.student.id+' · '+work.student.name+
+      ' · เริ่ม '+fmtTime(work.startedAt)+' · บันทึกแล้ว '+work.log.length+' ขั้นตอน';
+    if(viewing){
+      const f=viewing.file;
+      const own=!work || work.student.id===f.student.id;
+      workUi.viewInfo.textContent='👁 กำลังดูงานของ '+f.student.id+' · '+f.student.name+
+        ' (บันทึกเมื่อ '+fmtTime(f.savedAt)+') · ดูอย่างเดียว แก้ไขสายไม่ได้';
+      workUi.resume.hidden=!own;
+      workUi.resume.textContent='ทำงานต่อในนาม '+f.student.id;
+    }
+  }
+  // Replace the board with a given state without logging it.
+  function applyState(state) {
+    replaying=true;
+    links=[];
+    setRelayAddon(!!state.relayAddon,{quiet:true});
+    setExpansion(!!state.expansion,{quiet:true});
+    links=state.links.filter(([a,b])=>portById.has(a)&&portById.has(b)).map(([a,b,kind])=>({a,b,kind}));
+    armed=null;hoveredLink=null;highlighted=null;
+    linksChanged();
+    replaying=false;
+  }
+  function startWork() {
+    const id=workUi.id.value.trim(), name=workUi.name.value.trim().replace(/\s+/g,' ');
+    if(!/^[A-Za-z0-9-]{4,20}$/.test(id)) {workSay('กรอกรหัสนักศึกษา 4–20 ตัว (ตัวเลข ตัวอักษร หรือ -)',true);workUi.id.focus();return;}
+    if(name.length<2) {workSay('กรอกชื่อ-นามสกุล',true);workUi.name.focus();return;}
+    work={student:{id,name},sessionId:randomId(),deviceId,startedAt:new Date().toISOString(),log:[],chain:''};
+    work.chain=WorkFile.genesis(work);
+    // A new piece of work always starts from an empty board, and undo cannot reach
+    // back past it, so nobody can bring wiring in from before they started.
+    history.length=0;
+    applyState({links:[],expansion,relayAddon});
+    record('S',{links:[],expansion,addon:relayAddon});
+    workSay('เริ่มทำงานแล้ว ทุกขั้นตอนจะถูกบันทึก · กด "บันทึกงาน" เพื่อได้ไฟล์ส่งอาจารย์');
+    showWork();
+  }
+  // Collect readable names for every jack that appears anywhere in the work.
+  function portLabels(log,current) {
+    const ids=new Set(current.flatMap(([a,b])=>[a,b]));
+    for(const [,code,d] of log){
+      if(code==='+'||code==='-') {ids.add(d[0]);ids.add(d[1]);}
+      if(code==='L') d.forEach(([a,b])=>{ids.add(a);ids.add(b);});
+    }
+    const labels={};
+    for(const id of ids) if(portById.has(id)) labels[id]=label(portById.get(id));
+    return labels;
+  }
+  function saveWork() {
+    if(viewing) {workSay('กำลังดูงานของคนอื่นอยู่ บันทึกไม่ได้ · กด "ปิดการดู" ก่อน',true);return;}
+    if(!work) {workSay('กรอกรหัสและชื่อ แล้วกด "เริ่มทำงาน" ก่อนจึงจะบันทึกงานได้',true);return;}
+    record('W');
+    const current=links.map(linkTuple);
+    const file={format:WorkFile.FORMAT,version:1,student:work.student,sessionId:work.sessionId,
+      deviceId:work.deviceId,startedAt:work.startedAt,savedAt:new Date().toISOString(),
+      state:{links:current,expansion,relayAddon,labels:portLabels(work.log,current)},
+      log:work.log,chain:work.chain};
+    file.sig=WorkFile.signature(file);
+    const now=new Date(), two=n=>String(n).padStart(2,'0');
+    const stamp=now.getFullYear()+two(now.getMonth()+1)+two(now.getDate())+'-'+two(now.getHours())+two(now.getMinutes());
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(file)],{type:'application/json'}));
+    a.download=work.student.id+'_'+stamp+'.ep';
+    document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    workSay('บันทึกไฟล์ '+a.download+' แล้ว · ส่งไฟล์นี้ให้อาจารย์ (เปลี่ยนชื่อไฟล์ได้ ไม่มีผลกับรหัสในไฟล์)');
+  }
+  async function openWork(fileHandle) {
+    let file;
+    try {file=JSON.parse(await fileHandle.text());}
+    catch {workSay('เปิดไฟล์ไม่ได้: ไม่ใช่ไฟล์งาน (.ep)',true);return;}
+    const check=WorkFile.verify(file);
+    if(!check.ok) {workSay('❌ เปิดไม่ได้: '+check.problems.join(' · '),true);return;}
+    if(viewing) closeView(true);
+    // Always open read-only first; only the file's own student may carry on with it.
+    viewing={file,backup:{links:links.map(l=>({...l})),expansion,relayAddon,history:history.splice(0)}};
+    replaying=true;
+    applyState(file.state);
+    replaying=false;
+    workSay('✅ ไฟล์ถูกต้อง ไม่ถูกแก้ไข · '+file.log.length+' ขั้นตอน');
+    showWork();
+  }
+  function closeView(quiet=false) {
+    if(!viewing) return;
+    const {backup}=viewing;
+    viewing=null;
+    applyState({links:backup.links.map(linkTuple),expansion:backup.expansion,relayAddon:backup.relayAddon});
+    history.push(...backup.history);
+    if(!quiet) workSay('ปิดการดูแล้ว กลับมาที่งานของคุณ');
+    showWork();
+  }
+  function resumeFromView() {
+    if(!viewing) return;
+    const f=viewing.file;
+    if(work && work.student.id!==f.student.id) {workSay('ไฟล์นี้เป็นของ '+f.student.id+' ทำงานต่อในนามคนอื่นไม่ได้',true);return;}
+    work={student:f.student,sessionId:f.sessionId,deviceId:f.deviceId,startedAt:f.startedAt,log:f.log.slice(),chain:f.chain};
+    viewing=null;
+    history.length=0;
+    record('R',{device:deviceId});
+    workSay('ทำงานต่อจากไฟล์แล้ว · บันทึกต่อในนาม '+f.student.id);
+    showWork();
+  }
+  // Two clicks instead of confirm(), which embedded browsers block.
+  function confirmClick(button,prompt,action) {
+    if(button.dataset.armed){delete button.dataset.armed;button.textContent=button.dataset.label;action();return;}
+    button.dataset.label=button.textContent;
+    button.dataset.armed='1';
+    button.textContent=prompt;
+    setTimeout(()=>{if(button.dataset.armed){delete button.dataset.armed;button.textContent=button.dataset.label;}},4000);
+  }
+  function endWork() {
+    work=null;
+    persistWork();
+    history.length=0;
+    applyState({links:[],expansion,relayAddon});
+    workUi.id.value='';workUi.name.value='';
+    workSay('จบงานแล้ว แผงว่างพร้อมสำหรับคนถัดไป');
+    showWork();
+  }
+  // Pick up an unfinished session after a reload, if the browser kept it.
+  function restoreWork() {
+    let saved=null;
+    try {saved=JSON.parse(localStorage.getItem(workKey)||'null');} catch {}
+    if(!saved?.student) return false;
+    let hash=WorkFile.genesis(saved);
+    for(const entry of saved.log) hash=WorkFile.step(hash,entry);
+    if(hash!==saved.chain) {persistWork();return false;}
+    work=saved;
+    const state=WorkFile.replay(saved.log);
+    links=state.links.filter(([a,b])=>portById.has(a)&&portById.has(b)).map(([a,b,kind])=>({a,b,kind}));
+    try {
+      localStorage.setItem('electro-pneumatic-expansion',state.expansion?'on':'off');
+      localStorage.setItem('electro-pneumatic-relay-addon',state.addon?'on':'off');
+    } catch {}
+    return true;
+  }
+  document.querySelector('#work-begin').onclick=startWork;
+  for(const input of [workUi.id,workUi.name]) input.addEventListener('keydown',e=>{if(e.key==='Enter') startWork();});
+  document.querySelector('#work-save').onclick=saveWork;
+  document.querySelector('#work-open').onclick=()=>workUi.file.click();
+  workUi.file.onchange=()=>{const f=workUi.file.files[0];workUi.file.value='';if(f) openWork(f);};
+  workUi.end.onclick=()=>confirmClick(workUi.end,'กดอีกครั้งเพื่อจบงาน (ล้างแผง)',endWork);
+  workUi.resume.onclick=resumeFromView;
+  document.querySelector('#view-close').onclick=()=>closeView();
+  const viewOnlyBlocked=()=>{
+    if(!viewing) return false;
+    say('กำลังดูงานของ '+viewing.file.student.id+' แบบดูอย่างเดียว · กด "ปิดการดู" เพื่อกลับไปทำงานของคุณ',true);
+    return true;
+  };
+
+  try {
+    const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');
+    if(Array.isArray(saved)) links=saved.filter(l=>portById.get(l?.a)?.kind===l.kind && portById.get(l?.b)?.kind===l.kind);
+  } catch {}
+  // An unfinished signed session wins over the plain saved wiring.
+  restoreWork();
+  let savedExpansion=false;
+  try {savedExpansion=localStorage.getItem('electro-pneumatic-expansion')==='on';} catch {}
+  let savedAddon=false;
+  try {savedAddon=localStorage.getItem('electro-pneumatic-relay-addon')==='on';} catch {}
+  if(savedAddon) {relayAddon=true;addonButton.setAttribute('aria-pressed','true');addonButton.textContent='− หน้าสัมผัสรีเลย์ 1–2 (4CO)';}
+  // Startup restores state; none of it is a new step of the student's work.
+  replaying=true;
+  if(savedExpansion) setExpansion(true,{quiet:true});
+  else linksChanged();
+  replaying=false;
+  showWork();
+  if(work) workSay('ทำงานต่อจากครั้งก่อน · '+work.log.length+' ขั้นตอน');
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  function zoom(factor,x,y) {
+    if(x!==undefined) {
+      const rect=canvas.getBoundingClientRect();
+      zoomAnchor=screenOffset(x-rect.left-rect.width/2,y-rect.top-rect.height/2,rect);
+    } else zoomAnchor=null;
+    zoomTarget=clamp(zoomTarget*factor,minDistance,maxDistance);
+    schedule();
+  }
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    zoom(Math.exp(clamp(e.deltaY*(e.deltaMode===1?16:1),-240,240)*.0017),e.clientX,e.clientY);
+  },{passive:false});
+  canvas.addEventListener('keydown',e=>{
+    switch(e.key){
+      case 'ArrowLeft': yaw+=.12;break;
+      case 'ArrowRight': yaw-=.12;break;
+      case 'ArrowUp': pitch=clamp(pitch+.12,.12,1.565);break;
+      case 'ArrowDown': pitch=clamp(pitch-.12,.12,1.565);break;
+      case '+': case '=': zoom(.9);break;
+      case '-': zoom(1.1);break;
+      default:return;
+    }
+    e.preventDefault();schedule();
+  });
+  function setView(view) {
+    setSelectionMode(false);
+    [yaw,pitch,distance]=view;
+    // With the expansion panel fitted, centre on the longer board.
+    target=expansion?[0,0,-3.3]:[0,0,0];
+    zoomTarget=distance;
+    zoomAnchor=null;
+    schedule();
+  }
+  function homeView() {return expansion?[.34,.94,30.5]:home;}
+  document.querySelector('#top').onclick=()=>setView(expansion?[0,1.565,33]:[0,1.565,23]);
+  document.querySelector('#reset').onclick=()=>setView(homeView());
+  function rotate(amount) {
+    yaw+=amount;
+    zoomTarget=distance;
+    zoomAnchor=null;
+    schedule();
+  }
+  document.querySelector('#rotate-left').onclick=()=>rotate(.22);
+  document.querySelector('#rotate-right').onclick=()=>rotate(-.22);
+  document.querySelector('#zoom-in').onclick=()=>zoom(.85);
+  document.querySelector('#zoom-out').onclick=()=>zoom(1/.85);
+  areaButton.onclick=()=>setSelectionMode(!selecting);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && selecting) setSelectionMode(false);
+    else if(e.key==='Escape' && armed) {armed=null;say(defaultStatus);drawOverlay();}
+    else if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !e.target.closest('input,textarea')) {
+      e.preventDefault();document.querySelector('#undo').click();
+    }
+  });
+  document.querySelector('#toggle').onclick=e=>{
+    showInk=!showInk;
+    e.currentTarget.setAttribute('aria-pressed',String(showInk));schedule();
+  };
+  new ResizeObserver(schedule).observe(canvas);
+  schedule();
+}
+</script>
+</body>
+</html>
