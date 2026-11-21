@@ -441,6 +441,13 @@ footer{color:var(--muted);font-size:13px;margin:13px 0}
 .simbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px;border-top:1px solid var(--line);font-size:13px}
 .simbar label{display:flex;align-items:center;gap:6px;color:var(--muted)}
 .roller.unbound .caption{color:#b3261e}
+/* Brushed-metal plate with engraved lettering, flush on the board. */
+.nameplate{position:absolute;left:57%;transform:translate(-50%,0) translateZ(1px);padding:calc(var(--unit) * .45) calc(var(--unit) * 1.6);
+  border-radius:calc(var(--unit) * .35);white-space:nowrap;pointer-events:none;
+  font:700 calc(var(--unit) * 1.55)/1.15 "Leelawadee UI",system-ui,sans-serif;letter-spacing:.02em;color:#2c3a42;
+  text-shadow:0 1px 0 #ffffffb0,0 -1px 0 #0000002e;
+  background:repeating-linear-gradient(90deg,#fff0 0 2px,#ffffff26 2px 3px),linear-gradient(180deg,#e9eef0,#b7c3c8 55%,#d4dcdf);
+  box-shadow:inset 0 0 0 1px #8b989e,inset 0 1px 0 #fff,0 1px 2px #1c2a3366}
 .logic .face{background:linear-gradient(135deg,#eef2f3,#a7b6bc 70%,#7d8f96);transform-style:preserve-3d}
 .logic-label{position:absolute;inset:0;display:grid;place-items:center;font:900 calc(var(--unit) * 1.45)/1 system-ui;color:#1f2d35;letter-spacing:.02em}
 .logic-label.low{align-items:end;padding-bottom:8%}
@@ -586,6 +593,16 @@ for (const [left, top] of [[1,2],[98,2],[1,96],[98,96]]) {
   screw.style.cssText = 'left:' + left + '%;top:' + top + '%';
   screw.dataset.baseTop = top;
   board.append(screw);
+}
+
+// Engraved nameplate along the bottom edge of the board.
+{
+  const plate = document.createElement('span');
+  plate.className = 'nameplate';
+  plate.textContent = 'ผศ. ดร.ธนสาร อินทรกำธรชัย';
+  plate.style.top = '94.2%';
+  plate.dataset.baseTop = 94.2;
+  board.append(plate);
 }
 
 const metal = ['#e5f0f5','#f9fbfc','#becdd3','#879aa3','#607780','#41555e','#34444c','#35444b',
@@ -959,7 +976,8 @@ function layoutBoard() {
   for (const el of board.querySelectorAll('[data-base-top]')) {
     const base = Number(el.dataset.baseTop);
     const y = el.classList.contains('screw') && base < 50 ? base : base + layout.extra;
-    el.style.setProperty(el.classList.contains('screw') ? 'top' : '--tube-top', y / total * 100 + '%');
+    const usesTop = el.classList.contains('screw') || el.classList.contains('nameplate');
+    el.style.setProperty(usesTop ? 'top' : '--tube-top', y / total * 100 + '%');
   }
   updateUnit();
 }
@@ -1041,6 +1059,10 @@ let suppressClick = false;
 
 function updateView(changes) {
   camera = { ...camera, ...changes };
+  // Keep the view above the board: tilt from straight down (0°) to a low
+  // side view (75°), and only a slight sideways lean, so the underside never shows.
+  camera.tilt = Math.min(75, Math.max(0, camera.tilt));
+  camera.yaw = Math.min(25, Math.max(-25, camera.yaw));
   // Set the transform itself, not inherited custom properties: changing an
   // inherited variable would restyle every one of the board's thousands of
   // descendants on each drag frame.
@@ -1060,8 +1082,8 @@ function zoomAt(factor, x = 0, y = 0) {
 
 updateView(initialView);
 
-document.querySelector('#left').onclick = () => updateView({yaw:camera.yaw - 15});
-document.querySelector('#right').onclick = () => updateView({yaw:camera.yaw + 15});
+document.querySelector('#left').onclick = () => updateView({angle:camera.angle - 15});
+document.querySelector('#right').onclick = () => updateView({angle:camera.angle + 15});
 document.querySelector('#zoom-out').onclick = () => zoomAt(1 / 1.25);
 document.querySelector('#zoom-in').onclick = () => zoomAt(1.25);
 document.querySelector('#top').onclick = () => updateView({...initialView, tilt:0, yaw:0, angle:0});
@@ -1103,8 +1125,10 @@ viewport.addEventListener('pointermove', event => {
     updateView({x:drag.start.x + dx, y:drag.start.y + dy});
   } else {
     updateView({
-      tilt:(drag.start.tilt - dy * drag.degreesPerPixel) % 360,
-      yaw:(drag.start.yaw + dx * drag.degreesPerPixel) % 360
+      // Up/down tilts the view (clamped above the board); left/right spins the
+      // board around its own vertical axis, like walking around a table.
+      tilt:drag.start.tilt - dy * drag.degreesPerPixel * .5,
+      angle:(drag.start.angle + dx * drag.degreesPerPixel) % 360
     });
   }
 });
@@ -1328,8 +1352,14 @@ function routeHoses() {
   const cols = Math.ceil(100 / cell) + 1, rows = Math.ceil((bottom - top) / cell) + 1;
   const blocked = new Uint8Array(cols * rows);
   const usage = new Float32Array(cols * rows);
-  for (const inst of instances) {
-    const r = obstacleRect(inst);
+  // The nameplate is a keep-out area too, so no hose is drawn across the name.
+  const plate = board.querySelector('.nameplate');
+  // offsetLeft ignores the plate's translate(-50%), so centre on it.
+  const plateRect = {x0:(plate.offsetLeft - plate.offsetWidth / 2) / board.clientWidth * 100,
+    x1:(plate.offsetLeft + plate.offsetWidth / 2) / board.clientWidth * 100,
+    y0:(plate.offsetTop / board.clientHeight * boardHeight() - layout.extra) * PHYS,
+    y1:((plate.offsetTop + plate.offsetHeight) / board.clientHeight * boardHeight() - layout.extra) * PHYS};
+  for (const r of [...instances.map(obstacleRect), plateRect]) {
     const c0 = Math.max(0, Math.floor((r.x0 - ROUTE.margin) / cell)), c1 = Math.min(cols - 1, Math.ceil((r.x1 + ROUTE.margin) / cell));
     const r0 = Math.max(0, Math.floor((r.y0 - ROUTE.margin - top) / cell)), r1 = Math.min(rows - 1, Math.ceil((r.y1 + ROUTE.margin - top) / cell));
     for (let row = r0; row <= r1; row++) for (let col = c0; col <= c1; col++) blocked[row * cols + col] = 1;
