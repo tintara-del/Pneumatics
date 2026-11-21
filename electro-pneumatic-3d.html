@@ -815,6 +815,23 @@ function start() {
   print('PUSH BUTTON SWITCH',-1.84,3.52);
   print('AIR DISTRIBUTION',2.51,3.58);
   print('AIR SHUT-OFF',5.03,3.58);
+  // Designer nameplate: a dark printed plate in the free space right of the timer row.
+  {
+    const plate={x:4.76,z:2.22,w:1.86,d:.62};
+    ink.save();
+    // Printed straight onto the grey panel, in the same ink as the other labels.
+    ink.fillStyle='#22282c';ink.textAlign='center';
+    const name='ผศ. ดร.ธนสาร อินทรกำธรชัย';
+    let size=.16;
+    ink.font='700 '+size+'px Tahoma, "Leelawadee UI", "Noto Sans Thai", sans-serif';
+    const fit=(plate.w-.28)/ink.measureText(name).width;
+    if(fit<1){size*=fit;ink.font='700 '+size+'px Tahoma, "Leelawadee UI", "Noto Sans Thai", sans-serif';}
+    ink.fillText(name,plate.x,plate.z+.08);
+    ink.fillStyle='#42494e';
+    ink.font='600 .07px Arial, sans-serif';
+    ink.fillText('ELECTRO-PNEUMATIC TRAINING BOARD',plate.x,plate.z-.16);
+    ink.restore();
+  }
 
   // Soft contact shadows are baked onto the board in model coordinates.
   const shadowMap=document.createElement('canvas');
