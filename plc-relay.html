@@ -34,6 +34,7 @@ h2{margin:0;font-size:20px} .heading small{color:#aebcc8}
 .pins{display:flex;justify-content:center;gap:4px;margin-top:4px;position:relative;z-index:2}
 button,select{font:inherit;cursor:pointer;color:inherit}
 .pin{min-width:23px;padding:2px;border:1px solid #737e86;border-radius:4px;background:#20262c;color:#f6f8fa;font:11px monospace}
+.pin i{display:block;font:9px/11px monospace;font-style:normal;color:#9fc3d1}
 .pin::before{content:"";display:block;margin:2px auto 4px;width:12px;height:12px;border-radius:50%;border:1px solid #aab1b6;background:linear-gradient(140deg,#b7c0c5 41%,#4b565f 42% 57%,#a3acb2 58%);box-shadow:inset 0 0 3px #000,0 2px 2px #000}
 .pin.selected{outline:2px solid #fff;outline-offset:1px}.pin.connected::before{border-color:#73d5ff}
 .cap,.lamp{display:block;width:40px;height:40px;margin:4px auto 6px;border:4px solid #a3aab0;border-radius:50%;background:radial-gradient(circle at 35% 27%,#57ad72,#16532e 68%);box-shadow:0 4px 0 #10171a,0 5px 7px #000a}
@@ -125,7 +126,7 @@ summary{cursor:pointer;color:#fff} code{color:#ffc47b} details p{margin:8px 0}
 <p>คลิกขั้วสองจุดเพื่อต่อสาย หนึ่งขั้วต่อได้หลายสาย เปิด/ปิดไฟด้วยสวิตช์ ON/OFF บนแหล่งจ่าย 24 VDC และต้องปิดไฟก่อนแก้สาย <strong>คลิกที่เส้นสาย</strong> แล้วกดปุ่ม <strong>×</strong> ที่ขึ้นบนสาย (หรือปุ่ม Delete) เพื่อลบสายเส้นนั้น หรือกด <strong>ย้อนสาย</strong> เพื่อเอาสายล่าสุดออก</p>
 <p><strong>ตัวอย่างทีละขั้น</strong> จะไฮไลต์ขั้วที่ต้องต่อและเส้นประแสดงแนวสาย ต่อเองหรือกด <strong>ทำขั้นนี้ให้ดู</strong> ก็ได้ จากนั้นพาทดสอบ <strong>ON → กด Start → ปล่อย Start → กด Stop → ปล่อย Stop</strong></p>
 <p><strong>แบบฝึก</strong> แผง PLC มี 7 ข้อ (ต่อสาย 5 ข้อ เขียน Ladder 2 ข้อ) แผง Relay มี 5 ข้อ ทุกข้อกด <strong>เรียนทีละขั้น</strong> ให้ระบบอธิบายแนวคิด แล้วแนะนำการต่อทีละเส้น (ขั้วที่ต้องต่อจะกะพริบ) ฝั่ง PLC จะแสดง Ladder ของข้อนั้นพร้อมคำอธิบาย กด <strong>ทำขั้นนี้ให้ดู</strong> เพื่อดูการต่อสายแบบเคลื่อนไหวได้ หรือกด <strong>▶ สาธิตอัตโนมัติ</strong> ให้ระบบทำให้ดูจนจบ ปุ่ม <strong>ตรวจคำตอบ</strong> จะจำลองการกดปุ่มแล้วดูว่าหลอดและสัญญาณทำงานตามโจทย์หรือไม่ จึงต่อสายแบบอื่นที่ทำงานถูกต้องก็ผ่านได้</p>
-<p><strong>โปรแกรม Ladder</strong> (ใต้แผง PLC) แต่ละ Rung มีหน้าสัมผัสต่ออนุกรมกัน กดปุ่ม <strong>+</strong> ท้าย Rung เพื่อเพิ่มอนุกรม คลิกหน้าสัมผัสแล้วกด <strong>+ ขนาน</strong> เพื่อต่อขนาน เปลี่ยนชนิด NO/NC และแอดเดรส X/Y/M ได้ คอยล์เลือกได้ Y0–Y7 หรือ M0–M7 โปรแกรมเริ่มต้นคือ <code>[X1]–[X0 ‖ Y0]–(Y0)</code>, <code>[/Y0]–(Y1)</code>, <code>[X2]–(Y2)</code>, <code>[X3]–(Y3)</code> ฝั่ง Relay มี K1 และ K2 แต่ละตัวมีหน้าสัมผัสสลับ 4 ชุด (COM, NO, NC) ตัวเครื่อง FX5U‑32MR/ES จริงรับไฟ AC ที่ L/N ตามคู่มือ Mitsubishi</p>
+<p><strong>โปรแกรม Ladder</strong> (ใต้แผง PLC) แต่ละ Rung มีหน้าสัมผัสต่ออนุกรมกัน กดปุ่ม <strong>+</strong> ท้าย Rung เพื่อเพิ่มอนุกรม คลิกหน้าสัมผัสแล้วกด <strong>+ ขนาน</strong> เพื่อต่อขนาน เปลี่ยนชนิด NO/NC และแอดเดรส X/Y/M ได้ คอยล์เลือกได้ Y0–Y7 หรือ M0–M7 โปรแกรมเริ่มต้นคือ <code>[X1]–[X0 ‖ Y0]–(Y0)</code>, <code>[/Y0]–(Y1)</code>, <code>[X2]–(Y2)</code>, <code>[X3]–(Y3)</code> ฝั่ง Relay มี K1 และ K2 แต่ละตัวมีหน้าสัมผัสสลับ 4 ชุด เลขขั้วตามมาตรฐาน: หลักแรก = เลขชุด, หลักที่สอง 1 = COM, 2 = NC, 4 = NO (ชุด 1 = 11–12–14, ชุด 2 = 21–22–24, ชุด 3 = 31–32–34, ชุด 4 = 41–42–44) ตัวเครื่อง FX5U‑32MR/ES จริงรับไฟ AC ที่ L/N ตามคู่มือ Mitsubishi</p>
 </details>
 </main>
 <script>
@@ -156,8 +157,10 @@ const plc = pins(pin("SS","S/S"), ...channels.map(i => pin("X" + i))) +
 const group = (caption, items, captionFirst) => '<div class="pgroup">' +
   (captionFirst ? '<small>' + caption + '</small>' : '') + pins(...items) +
   (captionFirst ? '' : '<small>' + caption + '</small>') + '</div>';
+// เลขขั้วตามมาตรฐาน EN 50005: หลักแรก = เลขชุด, หลักที่สอง 1 = COM, 2 = NC, 4 = NO (เช่น ชุด 1 = 11–12–14)
 const contact = (id, set, captionFirst) => group("ชุด " + set,
-  [pin(id + "-" + set + "C","COM"),pin(id + "-" + set + "O","NO"),pin(id + "-" + set + "N","NC")], captionFirst);
+  [pin(id + "-" + set + "C", set + "1<i>COM</i>"), pin(id + "-" + set + "N", set + "2<i>NC</i>"),
+   pin(id + "-" + set + "O", set + "4<i>NO</i>")], captionFirst);
 const relayBank = '<div class="relay-bank">' + relays.map(id => device(
   '<div class="pgroups">' + group("COIL",[pin(id + "-A1","A1"),pin(id + "-A2","A2")]) +
   contact(id,1) + contact(id,2) + '</div>' +
@@ -168,7 +171,7 @@ const relayBank = '<div class="relay-bank">' + relays.map(id => device(
 const pinNames = { P:"+24V", N:"0V", Sa:"Start ขั้ว 13", Sb:"Start ขั้ว 14", Ta:"Stop ขั้ว 11", Tb:"Stop ขั้ว 12",
   Gp:"หลอด RUN (+)", Gn:"หลอด RUN (−)", Rp:"หลอด STOP (+)", Rn:"หลอด STOP (−)", SS:"S/S", COM:"COM0" };
 const pinName = id => pinNames[id] || id
-  .replace(/^(K\d)-(\d)([CON])$/, (_, k, s, t) => k + " ชุด " + s + " " + {C:"COM",O:"NO",N:"NC"}[t])
+  .replace(/^(K\d)-(\d)([CON])$/, (_, k, s, t) => k + " ขั้ว " + s + {C:"1",N:"2",O:"4"}[t] + " (" + {C:"COM",O:"NO",N:"NC"}[t] + ")")
   .replace(/^(K\d)-(A\d)$/, "$1 คอยล์ $2");
 
 // ---------- Ladder ----------
@@ -212,7 +215,7 @@ const tours = {
     ["Sb","X0","ต่อขั้ว 14 ของ Start เข้าอินพุต X0 เมื่อกด Start จะมี +24V เข้า X0"],
     ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของปุ่ม Stop"],
     ["Tb","X1","ต่อขั้ว 12 ของ Stop เข้า X1 — Stop เป็นหน้าสัมผัส NC ปกติจึงมีไฟเข้า X1 ตลอด"],
-    ["N","SS","ต่อ S/S ลง 0V ให้อินพุตเป็นแบบ sink (รับ +24V แล้วไหลกลับทาง S/S)"],
+    ["N","SS","ต่อ S/S ลง 0V ให้อินพุตเป็นแบบ source (กระแสไหลเข้าขั้ว X แล้วกลับทาง S/S ลง 0V)"],
     ["P","COM","ต่อ COM0 เข้า +24V เป็นไฟเลี้ยงของหน้าสัมผัสเอาต์พุต Y0–Y3"],
     ["Y0","Gp","ต่อ Y0 (RUN) ไปขั้ว + ของหลอด RUN"],
     ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
@@ -224,11 +227,11 @@ const tours = {
     ["Tb","Sa","ต่อขั้ว 12 ของ Stop ไปขั้ว 13 ของ Start ให้ Stop อนุกรมอยู่หน้า Start"],
     ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้าคอยล์ K1 ขั้ว A1"],
     ["N","K1-A2","ต่อคอยล์ K1 ขั้ว A2 ลง 0V — ถึงตรงนี้กด Start แล้วคอยล์จะทำงานเฉพาะตอนกด"],
-    ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไป COM ของหน้าสัมผัสชุด 1 (ทางไฟค้าง)"],
-    ["K1-1O","K1-A1","ต่อ NO ชุด 1 กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start ทำให้คอยล์ค้างหลังปล่อยปุ่ม"],
-    ["P","K1-2C","จ่าย +24V เข้า COM ของหน้าสัมผัสชุด 2"],
-    ["K1-2O","Gp","ต่อ NO ชุด 2 ไปขั้ว + ของหลอด RUN (ติดเมื่อ K1 ทำงาน)"],
-    ["K1-2N","Rp","ต่อ NC ชุด 2 ไปขั้ว + ของหลอด STOP (ติดเมื่อ K1 ไม่ทำงาน)"],
+    ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไปขั้ว 11 (COM ชุด 1) ของ K1 — ทางไฟค้าง"],
+    ["K1-1O","K1-A1","ต่อขั้ว 14 (NO ชุด 1) กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start ทำให้คอยล์ค้างหลังปล่อยปุ่ม"],
+    ["P","K1-2C","จ่าย +24V เข้าขั้ว 21 (COM ชุด 2) ของ K1"],
+    ["K1-2O","Gp","ต่อขั้ว 24 (NO ชุด 2) ไปขั้ว + ของหลอด RUN (ติดเมื่อ K1 ทำงาน)"],
+    ["K1-2N","Rp","ต่อขั้ว 22 (NC ชุด 2) ไปขั้ว + ของหลอด STOP (ติดเมื่อ K1 ไม่ทำงาน)"],
     ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
     ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
   ]
@@ -242,9 +245,9 @@ const testTexts = {
     "<b>ปล่อย Stop</b> — วงจรยังหยุดอยู่จนกว่าจะกด Start ใหม่"
   ],
   relay: [
-    "เลื่อนสวิตช์บนแหล่งจ่ายไปที่ <b>ON</b> — K1 ยังไม่ทำงาน หลอด STOP ติดผ่าน NC ชุด 2",
+    "เลื่อนสวิตช์บนแหล่งจ่ายไปที่ <b>ON</b> — K1 ยังไม่ทำงาน หลอด STOP ติดผ่านขั้ว 22 (NC ชุด 2)",
     "<b>กด Start ค้างไว้</b> — คอยล์ K1 ทำงาน หน้าสัมผัส NO ปิด หลอด RUN ติด",
-    "<b>ปล่อย Start</b> — ไฟยังไหลผ่าน NO ชุด 1 เข้าคอยล์ K1 จึงค้างอยู่ (self-holding)",
+    "<b>ปล่อย Start</b> — ไฟยังไหลผ่านขั้ว 14 (NO ชุด 1) เข้าคอยล์ K1 จึงค้างอยู่ (self-holding)",
     "<b>กด Stop</b> — ตัดไฟคอยล์ K1 หน้าสัมผัสคืนตัว หลอด RUN ดับ หลอด STOP ติด",
     "<b>ปล่อย Stop</b> — K1 ไม่กลับมาทำงานเอง จนกว่าจะกด Start ใหม่"
   ]
@@ -285,11 +288,11 @@ const tourSolution = kind => tours[kind].map(([a,b]) => a + "/" + b).join(" ");
 // คำอธิบายสายแต่ละเส้น ใช้ตอนสาธิตแบบฝึก
 const wireNotes = new Map(Object.values(tours).flat().map(([a,b,text]) => [[a,b].sort().join("/"), text]));
 [
-  ["K1-1O","Gp","ต่อ NO ชุด 1 ของ K1 ไปขั้ว + ของหลอด RUN — หลอดติดเมื่อคอยล์ K1 ทำงาน"],
-  ["K1-1N","Rp","ต่อ NC ชุด 1 ของ K1 ไปขั้ว + ของหลอด STOP — หลอดติดเมื่อคอยล์ K1 ไม่ทำงาน"],
-  ["K1-2O","K2-A1","ต่อ NO ชุด 2 ของ K1 เข้าคอยล์ K2 — เมื่อ K1 ค้าง K2 ก็ทำงานตาม"],
-  ["K2-1O","Gp","ต่อ NO ชุด 1 ของ K2 ไปขั้ว + ของหลอด RUN"],
-  ["K2-1N","Rp","ต่อ NC ชุด 1 ของ K2 ไปขั้ว + ของหลอด STOP"]
+  ["K1-1O","Gp","ต่อขั้ว 14 (NO ชุด 1) ของ K1 ไปขั้ว + ของหลอด RUN — หลอดติดเมื่อคอยล์ K1 ทำงาน"],
+  ["K1-1N","Rp","ต่อขั้ว 12 (NC ชุด 1) ของ K1 ไปขั้ว + ของหลอด STOP — หลอดติดเมื่อคอยล์ K1 ไม่ทำงาน"],
+  ["K1-2O","K2-A1","ต่อขั้ว 24 (NO ชุด 2) ของ K1 เข้าคอยล์ K2 — เมื่อ K1 ค้าง K2 ก็ทำงานตาม"],
+  ["K2-1O","Gp","ต่อขั้ว 14 (NO ชุด 1) ของ K2 ไปขั้ว + ของหลอด RUN"],
+  ["K2-1N","Rp","ต่อขั้ว 12 (NC ชุด 1) ของ K2 ไปขั้ว + ของหลอด STOP"]
 ].forEach(([a,b,text]) => wireNotes.set([a,b].sort().join("/"), text));
 function wireNote(a, b) {
   const known = wireNotes.get([a,b].sort().join("/"));
@@ -311,8 +314,8 @@ const relayLatch = [
   ["Tb","Sa","ต่อขั้ว 12 ของ Stop ไปขั้ว 13 ของ Start — Stop อนุกรมอยู่หน้า Start"],
   ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้าคอยล์ K1 ขั้ว A1"],
   ["N","K1-A2","ต่อคอยล์ K1 ขั้ว A2 ลง 0V — ถึงตรงนี้กด Start แล้วคอยล์ทำงานเฉพาะตอนกด"],
-  ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไป COM ชุด 1 ของ K1 — ทางไฟค้างต้องผ่าน Stop ด้วย กด Stop จึงตัดได้"],
-  ["K1-1O","K1-A1","ต่อ NO ชุด 1 กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start เมื่อ K1 ทำงานจะเลี้ยงคอยล์ตัวเองต่อ (self-holding)"]
+  ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไปขั้ว 11 (COM ชุด 1) ของ K1 — ทางไฟค้างต้องผ่าน Stop ด้วย กด Stop จึงตัดได้"],
+  ["K1-1O","K1-A1","ต่อขั้ว 14 (NO ชุด 1) กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start เมื่อ K1 ทำงานจะเลี้ยงคอยล์ตัวเองต่อ (self-holding)"]
 ];
 const exercises = {
   plc: [
@@ -323,7 +326,7 @@ const exercises = {
       lesson:[
         ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start — เป็นต้นทางไฟของปุ่ม"],
         ["Sb","X0","ต่อขั้ว 14 (ฝั่งออกของปุ่ม) เข้า X0 — กดปุ่มเมื่อไหร่ X0 ได้ +24V"],
-        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุตแบบ sink ถ้าไม่ต่อ LED X0 จะไม่ติดแม้กดปุ่ม"]
+        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุตแบบ source (กระแสไหลเข้าขั้ว X) ถ้าไม่ต่อ LED X0 จะไม่ติดแม้กดปุ่ม"]
       ],
       requires:["X0","SS"], test:jog("X0") },
     { title:"Stop (NC) เข้าอินพุต X1",
@@ -414,26 +417,26 @@ const exercises = {
       ],
       requires:["K1-A1","K1-A2"], test:jog("K1") },
     { title:"NO ของ K1 จุดหลอด RUN",
-      goal:"สั่งคอยล์ K1 ด้วย Start แบบข้อ 1 แล้วจ่าย +24V ผ่าน <b>COM–NO</b> ของ K1 ไปหลอด RUN ให้หลอดติดเฉพาะตอนกด Start",
-      intro:"หน้าสัมผัสแต่ละชุดมี 3 ขั้ว: <b>COM</b> (ขั้วกลาง), <b>NO</b> (ปกติเปิด), <b>NC</b> (ปกติปิด) — เมื่อคอยล์ทำงาน COM จะต่อกับ NO",
+      goal:"สั่งคอยล์ K1 ด้วย Start แบบข้อ 1 แล้วจ่าย +24V ผ่าน <b>ขั้ว 11–14 (COM–NO)</b> ของ K1 ไปหลอด RUN ให้หลอดติดเฉพาะตอนกด Start",
+      intro:"หน้าสัมผัสแต่ละชุดมี 3 ขั้ว ใช้เลขขั้ว 2 หลัก: <b>หลักแรก = เลขชุด</b> หลักที่สอง <b>1 = COM</b> (ขั้วกลาง), <b>2 = NC</b> (ปกติปิด), <b>4 = NO</b> (ปกติเปิด) เช่น ชุด 1 คือ 11–12–14, ชุด 2 คือ 21–22–24 — เมื่อคอยล์ทำงาน 11 จะต่อกับ 14",
       lesson:[
         ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
         ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้า A1 ของ K1"],
         ["N","K1-A2","ต่อ A2 ลง 0V — วงจรคอยล์ครบแล้ว"],
-        ["P","K1-1C","จ่าย +24V เข้า COM ชุด 1 — ไฟที่จะส่งผ่านหน้าสัมผัส"],
-        ["K1-1O","Gp","ต่อ NO ชุด 1 ไปขั้ว + ของหลอด RUN — ไฟผ่านเมื่อ K1 ทำงาน"],
+        ["P","K1-1C","จ่าย +24V เข้าขั้ว 11 (COM ชุด 1) — ไฟที่จะส่งผ่านหน้าสัมผัส"],
+        ["K1-1O","Gp","ต่อขั้ว 14 (NO ชุด 1) ไปขั้ว + ของหลอด RUN — ไฟผ่านเมื่อ K1 ทำงาน"],
         ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"]
       ],
       requires:["K1-A1",NO("K1")], test:jog("green") },
     { title:"NC ของ K1 จุดหลอด STOP",
-      goal:"สั่งคอยล์ K1 ด้วย Start แล้วจ่าย +24V ผ่าน <b>COM–NC</b> ของ K1 ไปหลอด STOP ให้หลอดติดตลอด และดับขณะกด Start",
+      goal:"สั่งคอยล์ K1 ด้วย Start แล้วจ่าย +24V ผ่าน <b>ขั้ว 11–12 (COM–NC)</b> ของ K1 ไปหลอด STOP ให้หลอดติดตลอด และดับขณะกด Start",
       intro:"<b>NC</b> ต่อกับ COM ตอนคอยล์ <b>ไม่ทำงาน</b> และแยกออกเมื่อคอยล์ทำงาน — นิยมใช้ทำไฟแสดงสถานะ \"หยุด\"",
       lesson:[
         ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
         ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้า A1 ของ K1"],
         ["N","K1-A2","ต่อ A2 ลง 0V"],
-        ["P","K1-1C","จ่าย +24V เข้า COM ชุด 1"],
-        ["K1-1N","Rp","ต่อ NC ชุด 1 ไปขั้ว + ของหลอด STOP — ไฟผ่านตอน K1 ไม่ทำงาน และถูกตัดเมื่อ K1 ทำงาน"],
+        ["P","K1-1C","จ่าย +24V เข้าขั้ว 11 (COM ชุด 1)"],
+        ["K1-1N","Rp","ต่อขั้ว 12 (NC ชุด 1) ไปขั้ว + ของหลอด STOP — ไฟผ่านตอน K1 ไม่ทำงาน และถูกตัดเมื่อ K1 ทำงาน"],
         ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
       ],
       requires:["K1-A1",NC("K1")], test:[["idle",{red:true}],["start",{red:false}],["idle",{red:true}]] },
@@ -442,8 +445,8 @@ const exercises = {
       intro:"Self-holding ด้วยรีเลย์: ใช้หน้าสัมผัส <b>NO ของ K1 เอง</b> ต่อขนานกับ Start เมื่อ K1 ทำงานแล้วจะเลี้ยงคอยล์ตัวเองต่อ และวาง Stop (NC) อนุกรมไว้ด้านหน้าเพื่อตัด",
       lesson:[
         ...relayLatch,
-        ["P","K1-2C","จ่าย +24V เข้า COM ชุด 2 — ใช้ชุดที่ 2 แยกไว้สำหรับหลอด"],
-        ["K1-2O","Gp","ต่อ NO ชุด 2 ไปขั้ว + ของหลอด RUN"],
+        ["P","K1-2C","จ่าย +24V เข้าขั้ว 21 (COM ชุด 2) — ใช้ชุดที่ 2 แยกไว้สำหรับหลอด"],
+        ["K1-2O","Gp","ต่อขั้ว 24 (NO ชุด 2) ไปขั้ว + ของหลอด RUN"],
         ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"]
       ],
       requires:["K1-A1",NO("K1")], test:latch(false,"K1") },
@@ -453,12 +456,12 @@ const exercises = {
       lesson:[
         ...relayLatch,
         { info:"วงจรค้าง K1 เสร็จแล้ว (6 เส้นแรก) — ต่อไปใช้ <b>หน้าสัมผัสชุด 2 ของ K1</b> เป็นสวิตช์สั่งคอยล์ K2" },
-        ["P","K1-2C","จ่าย +24V เข้า COM ชุด 2 ของ K1 — ทางไฟที่จะไปสั่ง K2"],
-        ["K1-2O","K2-A1","ต่อ NO ชุด 2 ของ K1 เข้า A1 ของ K2 — K1 ทำงานเมื่อไหร่ K2 ก็ทำงานตาม"],
+        ["P","K1-2C","จ่าย +24V เข้าขั้ว 21 (COM ชุด 2) ของ K1 — ทางไฟที่จะไปสั่ง K2"],
+        ["K1-2O","K2-A1","ต่อขั้ว 24 (NO ชุด 2) ของ K1 เข้า A1 ของ K2 — K1 ทำงานเมื่อไหร่ K2 ก็ทำงานตาม"],
         ["N","K2-A2","ต่อ A2 ของ K2 ลง 0V — ครบวงจรคอยล์ K2"],
-        ["P","K2-1C","จ่าย +24V เข้า COM ชุด 1 ของ K2 — ไฟสำหรับหลอดทั้งสอง"],
-        ["K2-1O","Gp","ต่อ NO ชุด 1 ของ K2 ไปหลอด RUN — ติดเมื่อ K2 ทำงาน"],
-        ["K2-1N","Rp","ต่อ NC ชุด 1 ของ K2 ไปหลอด STOP — ติดเมื่อ K2 ไม่ทำงาน"],
+        ["P","K2-1C","จ่าย +24V เข้าขั้ว 11 (COM ชุด 1) ของ K2 — ไฟสำหรับหลอดทั้งสอง"],
+        ["K2-1O","Gp","ต่อขั้ว 14 (NO ชุด 1) ของ K2 ไปหลอด RUN — ติดเมื่อ K2 ทำงาน"],
+        ["K2-1N","Rp","ต่อขั้ว 12 (NC ชุด 1) ของ K2 ไปหลอด STOP — ติดเมื่อ K2 ไม่ทำงาน"],
         ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
         ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
       ],
@@ -490,7 +493,7 @@ function circuitPart(el, st, sim) {
     : { name:"Stop", sub:"11–12 · NC", type:"NC", pins:["Ta","Tb"], on:!st.stop };
   if (el.t === "k") {
     const base = el.relay + "-" + el.set;
-    return { name:el.relay + " ชุด " + el.set, sub:el.no ? "COM–NO" : "COM–NC", type:el.no ? "NO" : "NC",
+    return { name:el.relay + " ชุด " + el.set, sub:el.set + "1–" + el.set + (el.no ? "4 · NO" : "2 · NC"), type:el.no ? "NO" : "NC",
       pins:[base + "C", base + (el.no ? "O" : "N")], on:Boolean(st.coils[idx(el.relay)]) === el.no };
   }
   if (el.t === "coil") return { name:el.relay, sub:"A1–A2", pins:[el.relay + "-A1", el.relay + "-A2"], on:Boolean(sim.coils[idx(el.relay)]) };
