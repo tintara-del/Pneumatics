@@ -1,0 +1,1378 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แล็บเดินสาย PLC และ Relay</title>
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:dark;font-family:"Leelawadee UI",system-ui,sans-serif;background:#101419;color:#eef2f5}
+body{margin:0} main{max-width:1440px;margin:auto;padding:clamp(16px,4vw,48px)}
+header{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+h1{font-size:clamp(28px,4vw,48px);margin:0;line-height:1.2} header p{margin:8px 0 0;color:#aebcc8}
+.tag{font:700 13px monospace;color:#ffc47b;border:1px solid #685136;padding:8px 12px;border-radius:5px}
+.side{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.credit{line-height:1.35;padding-left:10px;border-left:3px solid #ffc47b}.credit small{display:block;color:#8a97a2;font-size:12px}
+.credit b{font-size:16px;color:#eef2f5}
+.panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media(max-width:980px){.panels{grid-template-columns:1fr}}
+article{min-width:0;border:1px solid #34404b;border-radius:14px;overflow:hidden;background:#1b242d}
+.heading,.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:14px 16px}
+h2{margin:0;font-size:20px} .heading small{color:#aebcc8}
+.board{position:relative;isolation:isolate;background:radial-gradient(#485057 1px,transparent 1.4px) 4px 4px/13px 13px,#252d34;box-shadow:inset 0 2px 15px #000a;display:grid;gap:72px;padding:40px 14px}
+.row{display:flex;justify-content:center;gap:clamp(5px,1.25vw,16px);align-items:center;min-width:0}
+.device{position:relative;text-align:center;border-radius:5px;background:linear-gradient(150deg,#4f5963,#252b32 60%);border:1px solid #64717a;border-right-color:#121619;border-bottom-color:#121619;box-shadow:3px 5px 0 #11161a,7px 10px 10px #0008;padding:8px 5px;color:#fff;min-width:0}
+.device strong,.device small{display:block}.device small{color:#c9d3da}.device strong{font-size:14px}
+.supply{background:linear-gradient(110deg,#b7bcc0,#68737c);color:#151b20}.supply small{color:#18242e}
+.rail{position:relative;display:flex;justify-content:center}
+.rail::before{content:"";position:absolute;top:20%;bottom:20%;left:0;right:0;border-block:4px ridge #919ba3;background:linear-gradient(#707d86,#252e35,#6d7982);box-shadow:0 4px 7px #0008}
+.controller{padding:9px 7px;max-width:100%}.relay-bank{position:relative;display:flex;justify-content:center;gap:15px;flex-wrap:wrap}.relay .face{min-width:136px}.pgroups{display:flex;justify-content:center;gap:9px}.pgroup small{font:10px monospace;color:#9fc3d1;margin:2px 0}.relay .pins{margin-top:0}.controller .pins{flex-wrap:wrap}.relay{background:linear-gradient(140deg,#346b80,#173642 52%,#14232a);border-color:#55899c}
+.face{margin:8px 0;background:#141920;border:1px solid #58626a;border-radius:4px;padding:7px 12px;text-align:left;min-width:205px}
+.model{display:block;font:700 15px monospace;letter-spacing:.04em}.leds{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;font:12px monospace;color:#c1cbd4}
+.leds span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#46525a;margin-right:4px}
+.leds .active::before{background:#77f296;box-shadow:0 0 9px #6f9}
+.pins{display:flex;justify-content:center;gap:4px;margin-top:4px;position:relative;z-index:2}
+button,select{font:inherit;cursor:pointer;color:inherit}
+.pin{min-width:23px;padding:2px;border:1px solid #737e86;border-radius:4px;background:#20262c;color:#f6f8fa;font:11px monospace}
+.pin::before{content:"";display:block;margin:2px auto 4px;width:12px;height:12px;border-radius:50%;border:1px solid #aab1b6;background:linear-gradient(140deg,#b7c0c5 41%,#4b565f 42% 57%,#a3acb2 58%);box-shadow:inset 0 0 3px #000,0 2px 2px #000}
+.pin.selected{outline:2px solid #fff;outline-offset:1px}.pin.connected::before{border-color:#73d5ff}
+.cap,.lamp{display:block;width:40px;height:40px;margin:4px auto 6px;border:4px solid #a3aab0;border-radius:50%;background:radial-gradient(circle at 35% 27%,#57ad72,#16532e 68%);box-shadow:0 4px 0 #10171a,0 5px 7px #000a}
+.cap:active{transform:translateY(3px);box-shadow:0 1px 0 #10171a}.red{background:radial-gradient(circle at 35% 27%,#dd635e,#72241f 68%)}
+.lamp{background:radial-gradient(circle at 35% 27%,#496452,#15251c 68%)}
+.lamp.red{background:radial-gradient(circle at 35% 27%,#775550,#301b18 68%)}
+.lamp.on{background:#69f488;box-shadow:0 0 20px #37f976,inset 0 4px 8px #d6ffe4}
+.lamp.red.on{background:#ff635d;box-shadow:0 0 20px #fb584d,inset 0 4px 8px #ffd5c9}
+canvas{position:absolute;inset:0;z-index:1;pointer-events:none;width:100%;height:100%}
+.wire-del{position:absolute;z-index:3;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;border-radius:50%;border:2px solid #fff;background:#c4372f;color:#fff;font:700 16px/1 sans-serif;box-shadow:0 2px 8px #000c}
+.wire-del:hover{background:#e04a40}.wire-del[hidden]{display:none}
+.toolbar{justify-content:flex-start;border-top:1px solid #34404b}
+.action{border:1px solid #4f606e;background:#293743;padding:6px 9px;border-radius:5px;font-size:14px}
+select.action{max-width:100%;color:#eef2f5}
+.power{display:flex;flex-direction:column;align-items:center;gap:3px;margin:6px auto 4px;padding:4px 7px;border:1px solid #11171b;border-radius:4px;background:#1b2228;box-shadow:inset 0 1px 0 #3c464e,0 2px 3px #0008;color:#7d8a94;font:700 9px monospace}
+.track{position:relative;width:22px;height:36px;border-radius:3px;background:#4a3320;border:1px solid #98734c;box-shadow:inset 0 2px 5px #000b;transition:background .2s,border-color .2s}
+.knob{position:absolute;left:2px;right:2px;bottom:2px;height:15px;border-radius:2px;background:linear-gradient(#f2f4f6,#8d979e);box-shadow:0 2px 3px #000a;transition:bottom .2s}
+.power[aria-checked=true] .track{background:#2a7a50;border-color:#6fd197;box-shadow:inset 0 2px 5px #0008,0 0 10px #37f97666}
+.power[aria-checked=true] .knob{bottom:17px}
+.power[aria-checked=true] .on-txt,.power[aria-checked=false] .off-txt{color:#fff}
+.power[aria-checked=true] .on-txt{color:#77f296}
+.guide{margin:0 16px 14px;padding:12px 14px;border:1px solid #6a5434;border-radius:10px;background:#2a2319}
+.guide[hidden]{display:none}
+.guide-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:15px}
+.guide-count{color:#ffc47b;font:12px monospace}
+.progress{height:4px;border-radius:2px;background:#463a28;margin:8px 0 10px;overflow:hidden}
+.progress span{display:block;height:100%;background:#ffb85c}
+.guide-text{margin:0 0 10px;color:#efe6d8;line-height:1.6;font-size:14px}
+.guide-text b{color:#ffcb7a}
+.guide-result{margin:0 0 10px;padding:7px 10px;border-radius:6px;font-size:14px;line-height:1.5}
+.ok{background:#1d4430;color:#a9f5c4}.bad{background:#4a2220;color:#ffc2bb}.info{background:#24323e;color:#cfe3f2}
+.guide-actions{display:flex;gap:8px;flex-wrap:wrap}
+.action.primary{background:#7a5521;border-color:#c08a3e}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #ffcb7acc}50%{box-shadow:0 0 0 7px #ffcb7a00}}
+.hint{outline:2px solid #ffcb7a;outline-offset:2px;animation:pulse 1.2s infinite}
+.status{margin:0;padding:0 16px 12px;color:#c6d2dc;min-height:34px;font-size:14px}
+.ladder{border-top:1px solid #34404b;margin:0 0 2px;padding:12px 16px 16px;border-radius:0 0 14px 14px}
+.ladder-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.ladder-head h3{margin:0;font-size:16px}.ladder-head small{color:#aebcc8;font-size:12px}
+.ladder-tools{display:flex;gap:6px;flex-wrap:wrap}.ladder-tools .action{font-size:13px;padding:5px 8px}
+.ladder-body{background:#12171c;border:1px solid #34404b;border-radius:8px;padding:8px 6px;overflow-x:auto}
+.rung{display:flex;align-items:flex-start;gap:4px;min-width:max-content}.rung+.rung{margin-top:6px}
+.rung-no{width:18px;padding-top:17px;color:#7d8a94;font:11px monospace;text-align:right}
+.rung-line{flex:1;display:flex;align-items:flex-start;min-height:46px;padding-bottom:4px;border-inline:3px solid #8a97a2;
+  background:linear-gradient(#5d6a75,#5d6a75) 0 24px/100% 2px no-repeat}
+.block{position:relative;display:flex;flex-direction:column;gap:4px;margin:0 3px}
+.block.parallel::before,.block.parallel::after{content:"";position:absolute;top:24px;bottom:10px;width:2px;background:#5d6a75}
+.block.parallel::before{left:0}.block.parallel::after{right:0}
+.contact{display:flex;flex-direction:column;align-items:center;width:58px;height:36px;padding:2px 0;border:0;border-radius:4px;background:#12171c;color:#c9d3da}
+.contact small{font:11px/14px monospace;height:14px}
+.contact svg{width:58px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.block.parallel .contact{background:transparent}
+.contact:hover{background:#222b33}.contact.on{color:#77f296}.contact.sel{outline:2px solid #ffcb7a;background:#2f281c}
+.lad-add{margin:13px 3px 0;width:24px;height:24px;padding:0;border-radius:50%;border:1px dashed #6b7a86;background:#12171c;color:#aebcc8;line-height:1}
+.fill{flex:1;min-width:14px}
+.coil{display:flex;align-items:center;gap:1px;margin:11px 6px 0;padding:0 2px;background:#12171c;color:#c9d3da;font:700 17px monospace}
+.coil select{background:#12171c;color:inherit;border:1px solid #4f606e;border-radius:4px;font:700 12px monospace;padding:2px}
+.coil.on{color:#77f296}.coil.on select{border-color:#54956e}
+.lad-del{margin-top:13px;width:24px;height:24px;padding:0;border:0;background:none;color:#8a97a2;font-size:16px}.lad-del:hover{color:#ff8b82}
+.ladder-edit{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;min-height:34px;font-size:13px;color:#aebcc8}
+.ladder-edit .action{font-size:13px;padding:5px 8px}
+.lad-empty{margin:8px;color:#7d8a94;font-size:14px}
+.ladder-note{margin:0 0 8px;padding:7px 10px;border-radius:6px;background:#24323e;color:#cfe3f2;font-size:13px;line-height:1.5}
+.ladder-note[hidden]{display:none}.ladder-note b{color:#ffcb7a;font-family:monospace}
+.contact.focus,.coil.focus,.load.focus{outline:2px dashed #ffcb7a;outline-offset:2px;border-radius:4px}
+.how{color:#c9b89c;font-size:13px}
+.schematic .contact,.schematic .load{display:flex;flex-direction:column;align-items:center;width:64px;height:50px;padding:2px 0;
+  background:#12171c;color:#c9d3da;border-radius:4px}
+.schematic .block.parallel .contact{background:transparent}
+.schematic .block.parallel::before,.schematic .block.parallel::after{bottom:24px}
+.schematic small{font:11px/14px monospace;height:14px;white-space:nowrap}
+.schematic em{font:10px/14px monospace;font-style:normal;color:#8a97a2;white-space:nowrap}
+.schematic svg{width:58px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.schematic .load{margin-right:4px}.schematic .load.on{color:#77f296}
+.schematic .load.on svg circle{fill:#77f29633}.schematic .contact.on{color:#77f296}
+.schematic .rung-line{min-height:56px}
+.rails{display:flex;justify-content:space-between;padding:0 4px 4px 26px;font:700 11px monospace;color:#ffc47b}
+.rails[hidden]{display:none}
+details{margin-top:18px;border:1px solid #34404b;border-radius:8px;padding:12px 16px;color:#c6d2dc}
+summary{cursor:pointer;color:#fff} code{color:#ffc47b} details p{margin:8px 0}
+@media(prefers-reduced-motion:reduce){.hint{animation:none}.knob,.track{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>แล็บเดินสาย PLC และ Relay</h1><p>กด <b>ตัวอย่างทีละขั้น</b> เพื่อให้ระบบพาต่อสายจนทดสอบเสร็จ หรือเลือก <b>แบบฝึก</b> เพื่อลองต่อสาย/เขียน Ladder เองแล้วตรวจคำตอบ</p></div><div class="side"><div class="credit"><small>ผู้พัฒนา</small><b>ผศ. ดร.ธนสาร อินทรกำธรชัย</b></div><span class="tag">SELF-HOLDING / 24 VDC I/O</span></div></header>
+<div class="panels" id="panels"></div>
+<details><summary>วิธีทดลองและขอบเขตของแบบจำลอง</summary>
+<p>คลิกขั้วสองจุดเพื่อต่อสาย หนึ่งขั้วต่อได้หลายสาย เปิด/ปิดไฟด้วยสวิตช์ ON/OFF บนแหล่งจ่าย 24 VDC และต้องปิดไฟก่อนแก้สาย <strong>คลิกที่เส้นสาย</strong> แล้วกดปุ่ม <strong>×</strong> ที่ขึ้นบนสาย (หรือปุ่ม Delete) เพื่อลบสายเส้นนั้น หรือกด <strong>ย้อนสาย</strong> เพื่อเอาสายล่าสุดออก</p>
+<p><strong>ตัวอย่างทีละขั้น</strong> จะไฮไลต์ขั้วที่ต้องต่อและเส้นประแสดงแนวสาย ต่อเองหรือกด <strong>ทำขั้นนี้ให้ดู</strong> ก็ได้ จากนั้นพาทดสอบ <strong>ON → กด Start → ปล่อย Start → กด Stop → ปล่อย Stop</strong></p>
+<p><strong>แบบฝึก</strong> แผง PLC มี 7 ข้อ (ต่อสาย 5 ข้อ เขียน Ladder 2 ข้อ) แผง Relay มี 5 ข้อ ทุกข้อกด <strong>เรียนทีละขั้น</strong> ให้ระบบอธิบายแนวคิด แล้วแนะนำการต่อทีละเส้น (ขั้วที่ต้องต่อจะกะพริบ) ฝั่ง PLC จะแสดง Ladder ของข้อนั้นพร้อมคำอธิบาย กด <strong>ทำขั้นนี้ให้ดู</strong> เพื่อดูการต่อสายแบบเคลื่อนไหวได้ หรือกด <strong>▶ สาธิตอัตโนมัติ</strong> ให้ระบบทำให้ดูจนจบ ปุ่ม <strong>ตรวจคำตอบ</strong> จะจำลองการกดปุ่มแล้วดูว่าหลอดและสัญญาณทำงานตามโจทย์หรือไม่ จึงต่อสายแบบอื่นที่ทำงานถูกต้องก็ผ่านได้</p>
+<p><strong>โปรแกรม Ladder</strong> (ใต้แผง PLC) แต่ละ Rung มีหน้าสัมผัสต่ออนุกรมกัน กดปุ่ม <strong>+</strong> ท้าย Rung เพื่อเพิ่มอนุกรม คลิกหน้าสัมผัสแล้วกด <strong>+ ขนาน</strong> เพื่อต่อขนาน เปลี่ยนชนิด NO/NC และแอดเดรส X/Y/M ได้ คอยล์เลือกได้ Y0–Y7 หรือ M0–M7 โปรแกรมเริ่มต้นคือ <code>[X1]–[X0 ‖ Y0]–(Y0)</code>, <code>[/Y0]–(Y1)</code>, <code>[X2]–(Y2)</code>, <code>[X3]–(Y3)</code> ฝั่ง Relay มี K1 และ K2 แต่ละตัวมีหน้าสัมผัสสลับ 4 ชุด (COM, NO, NC) ตัวเครื่อง FX5U‑32MR/ES จริงรับไฟ AC ที่ L/N ตามคู่มือ Mitsubishi</p>
+</details>
+</main>
+<script>
+"use strict";
+const pairs = text => text.split(" ").map(pair => pair.split("/"));
+const sameWire = (w, a, b) => (w[0] === a && w[1] === b) || (w[0] === b && w[1] === a);
+const pin = (id, label = id) => '<button type="button" class="pin" data-pin="' + id + '">' + label + '</button>';
+const pins = (...items) => '<div class="pins">' + items.join("") + '</div>';
+const device = (body, extra = "") => '<div class="device ' + extra + '">' + body + '</div>';
+const buttonDevice = (name, type, prefix, red) => device(
+  '<strong>' + name + '</strong><button type="button" class="cap ' + (red ? "red" : "") +
+  '" data-cap="' + prefix + '" aria-label="กด ' + name + '"></button><small>' + type +
+  '</small>' + pins(pin(prefix + "a", red ? "11" : "13"), pin(prefix + "b", red ? "12" : "14"))
+);
+const lamp = (prefix, title, red) => device(pins(pin(prefix + "p", "+"), pin(prefix + "n", "−")) +
+  '<span class="lamp ' + (red ? "red" : "") + '" data-lamp="' + prefix + '"></span><strong>' + title + '</strong>');
+const channels = Array.from({length:8}, (_, index) => index);
+const relays = ["K1","K2"];
+const contactSets = [1,2,3,4];
+const led = (key, label) => '<span data-led="' + key + '">' + label + '</span>';
+const plc = pins(pin("SS","S/S"), ...channels.map(i => pin("X" + i))) +
+  '<div class="face"><small>MITSUBISHI ELECTRIC</small><b class="model">FX5U-32MR/ES</b>' +
+  '<div class="leds">' + led("power","PWR") + channels.map(i => led("X" + i,"X" + i)).join("") +
+  '</div><div class="leds">' + channels.map(i => led("Y" + i,"Y" + i)).join("") + '</div></div>' +
+  pins(pin("COM","COM0"), ...channels.slice(0,4).map(i => pin("Y" + i)),
+    pin("COM1"), ...channels.slice(4).map(i => pin("Y" + i)));
+// ขั้วรีเลย์อยู่ที่ขอบบน (คอยล์ + ชุด 1–2) และขอบล่าง (ชุด 3–4) ให้สายเข้าจากด้านนอกตัวอุปกรณ์
+const group = (caption, items, captionFirst) => '<div class="pgroup">' +
+  (captionFirst ? '<small>' + caption + '</small>' : '') + pins(...items) +
+  (captionFirst ? '' : '<small>' + caption + '</small>') + '</div>';
+const contact = (id, set, captionFirst) => group("ชุด " + set,
+  [pin(id + "-" + set + "C","COM"),pin(id + "-" + set + "O","NO"),pin(id + "-" + set + "N","NC")], captionFirst);
+const relayBank = '<div class="relay-bank">' + relays.map(id => device(
+  '<div class="pgroups">' + group("COIL",[pin(id + "-A1","A1"),pin(id + "-A2","A2")]) +
+  contact(id,1) + contact(id,2) + '</div>' +
+  '<div class="face"><small>24 VDC COIL</small><b class="model">' + id + ' · 4PDT</b>' +
+  '<div class="leds">' + led(id,"COIL") + '</div></div>' +
+  '<div class="pgroups">' + contact(id,3,true) + contact(id,4,true) + '</div>',"controller relay")).join("") + '</div>';
+
+const pinNames = { P:"+24V", N:"0V", Sa:"Start ขั้ว 13", Sb:"Start ขั้ว 14", Ta:"Stop ขั้ว 11", Tb:"Stop ขั้ว 12",
+  Gp:"หลอด RUN (+)", Gn:"หลอด RUN (−)", Rp:"หลอด STOP (+)", Rn:"หลอด STOP (−)", SS:"S/S", COM:"COM0" };
+const pinName = id => pinNames[id] || id
+  .replace(/^(K\d)-(\d)([CON])$/, (_, k, s, t) => k + " ชุด " + s + " " + {C:"COM",O:"NO",N:"NC"}[t])
+  .replace(/^(K\d)-(A\d)$/, "$1 คอยล์ $2");
+
+// ---------- Ladder ----------
+// โปรแกรม = รายการ Rung; Rung = บล็อกอนุกรมหลายบล็อก, แต่ละบล็อก = หน้าสัมผัสขนาน (OR), ขับคอยล์ 1 ตัว
+const c = (addr, type = "NO") => ({ addr, type });
+const rung = (blocks, coil) => ({ blocks, coil });
+const clone = value => JSON.parse(JSON.stringify(value));
+const DEFAULT_LADDER = [
+  rung([[c("X1")],[c("X0"),c("Y0")]], "Y0"),
+  rung([[c("Y0","NC")]], "Y1"),
+  rung([[c("X2")]], "Y2"),
+  rung([[c("X3")]], "Y3")
+];
+const contactAddrs = ["X","Y","M"].flatMap(p => channels.map(i => p + i));
+const coilAddrs = ["Y","M"].flatMap(p => channels.map(i => p + i));
+const programKey = program => JSON.stringify(program.map(r => [r.coil, r.blocks.map(b => b.map(x => x.type + x.addr))]));
+function runLadder(program, X, previous) {
+  const mem = { ...previous };
+  const driven = new Set(program.map(r => r.coil));
+  for (const key of Object.keys(mem)) if (!driven.has(key)) mem[key] = false;
+  const read = ct => {
+    const value = Boolean(ct.addr[0] === "X" ? X[ct.addr] : mem[ct.addr]);
+    return ct.type === "NC" ? !value : value;
+  };
+  // สแกนซ้ำจนผลนิ่ง (PLC จริงสแกนวนตลอดเวลา)
+  for (let pass = 0; pass < 8; pass++) {
+    let changed = false;
+    for (const r of program) {
+      const on = r.blocks.every(block => block.some(read));
+      if (Boolean(mem[r.coil]) !== on) { mem[r.coil] = on; changed = true; }
+    }
+    if (!changed) break;
+  }
+  return mem;
+}
+
+// ---------- ตัวอย่างทีละขั้น ----------
+const tours = {
+  plc: [
+    ["P","Sa","จ่าย +24V จากแหล่งจ่ายเข้าขั้ว 13 ของปุ่ม Start"],
+    ["Sb","X0","ต่อขั้ว 14 ของ Start เข้าอินพุต X0 เมื่อกด Start จะมี +24V เข้า X0"],
+    ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของปุ่ม Stop"],
+    ["Tb","X1","ต่อขั้ว 12 ของ Stop เข้า X1 — Stop เป็นหน้าสัมผัส NC ปกติจึงมีไฟเข้า X1 ตลอด"],
+    ["N","SS","ต่อ S/S ลง 0V ให้อินพุตเป็นแบบ sink (รับ +24V แล้วไหลกลับทาง S/S)"],
+    ["P","COM","ต่อ COM0 เข้า +24V เป็นไฟเลี้ยงของหน้าสัมผัสเอาต์พุต Y0–Y3"],
+    ["Y0","Gp","ต่อ Y0 (RUN) ไปขั้ว + ของหลอด RUN"],
+    ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
+    ["Y1","Rp","ต่อ Y1 (NOT RUN) ไปขั้ว + ของหลอด STOP"],
+    ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
+  ],
+  relay: [
+    ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของปุ่ม Stop"],
+    ["Tb","Sa","ต่อขั้ว 12 ของ Stop ไปขั้ว 13 ของ Start ให้ Stop อนุกรมอยู่หน้า Start"],
+    ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้าคอยล์ K1 ขั้ว A1"],
+    ["N","K1-A2","ต่อคอยล์ K1 ขั้ว A2 ลง 0V — ถึงตรงนี้กด Start แล้วคอยล์จะทำงานเฉพาะตอนกด"],
+    ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไป COM ของหน้าสัมผัสชุด 1 (ทางไฟค้าง)"],
+    ["K1-1O","K1-A1","ต่อ NO ชุด 1 กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start ทำให้คอยล์ค้างหลังปล่อยปุ่ม"],
+    ["P","K1-2C","จ่าย +24V เข้า COM ของหน้าสัมผัสชุด 2"],
+    ["K1-2O","Gp","ต่อ NO ชุด 2 ไปขั้ว + ของหลอด RUN (ติดเมื่อ K1 ทำงาน)"],
+    ["K1-2N","Rp","ต่อ NC ชุด 2 ไปขั้ว + ของหลอด STOP (ติดเมื่อ K1 ไม่ทำงาน)"],
+    ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
+    ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
+  ]
+};
+const testTexts = {
+  plc: [
+    "เลื่อนสวิตช์บนแหล่งจ่ายไปที่ <b>ON</b> — X1 ติดเพราะ Stop เป็น NC และหลอด STOP ติดจาก Y1 (Rung 2: NC Y0 → Y1)",
+    "<b>กด Start ค้างไว้</b> — X0 ติด Rung 1 มีไฟผ่าน X1 และ X0 จึงสั่ง Y0 หลอด RUN ติด",
+    "<b>ปล่อย Start</b> — หลอด RUN ยังติดค้าง เพราะหน้าสัมผัส Y0 ที่ขนานกับ X0 ใน Ladder ค้างสถานะไว้ (self-holding)",
+    "<b>กด Stop</b> — X1 ดับ Rung 1 ขาด Y0 ดับ หลอด RUN ดับ หลอด STOP ติด",
+    "<b>ปล่อย Stop</b> — วงจรยังหยุดอยู่จนกว่าจะกด Start ใหม่"
+  ],
+  relay: [
+    "เลื่อนสวิตช์บนแหล่งจ่ายไปที่ <b>ON</b> — K1 ยังไม่ทำงาน หลอด STOP ติดผ่าน NC ชุด 2",
+    "<b>กด Start ค้างไว้</b> — คอยล์ K1 ทำงาน หน้าสัมผัส NO ปิด หลอด RUN ติด",
+    "<b>ปล่อย Start</b> — ไฟยังไหลผ่าน NO ชุด 1 เข้าคอยล์ K1 จึงค้างอยู่ (self-holding)",
+    "<b>กด Stop</b> — ตัดไฟคอยล์ K1 หน้าสัมผัสคืนตัว หลอด RUN ดับ หลอด STOP ติด",
+    "<b>ปล่อย Stop</b> — K1 ไม่กลับมาทำงานเอง จนกว่าจะกด Start ใหม่"
+  ]
+};
+const phases = { idle:[false,false,"ไม่กดปุ่ม"], start:[true,false,"กด Start"], stop:[false,true,"กด Stop"] };
+const signalNames = { green:"หลอด RUN", red:"หลอด STOP", K1:"คอยล์ K1", K2:"คอยล์ K2" };
+const signalName = key => signalNames[key] || "LED " + key;
+const actLabels = { power:"เลื่อนสวิตช์บนแหล่งจ่ายไปที่ <b>ON</b>", startDown:"<b>กด Start ค้างไว้</b>",
+  startUp:"<b>ปล่อย Start</b>", stopDown:"<b>กด Stop ค้างไว้</b>", stopUp:"<b>ปล่อย Stop</b>" };
+const describe = expect => Object.entries(expect).map(([key,on]) => signalName(key) + (on ? " ติด" : " ดับ")).join(", ");
+// แปลงลำดับการทดสอบ (idle/start/stop) เป็นขั้นตอนกดปุ่มให้ผู้ใช้ทำตาม
+function actSteps(test, texts) {
+  return test.map(([phase, expect], i) => {
+    let act = "power";
+    if (i > 0) {
+      const from = test[i - 1][0];
+      act = phase === "start" ? "startDown" : phase === "stop" ? "stopDown" : from === "start" ? "startUp" : "stopUp";
+    }
+    return { act, expect, text:texts ? texts[i] : actLabels[act] + " — ควรเห็น " + describe(expect) };
+  });
+}
+const NO = id => [contactSets.map(s => id + "-" + s + "O"), "หน้าสัมผัส NO ของ " + id];
+const NC = id => [contactSets.map(s => id + "-" + s + "N"), "หน้าสัมผัส NC ของ " + id];
+const jog = key => [["idle",{[key]:false}],["start",{[key]:true}],["idle",{[key]:false}]];
+const latch = (both, coil) => ["idle","start","idle","stop","idle","start","idle"].map((phase,i) => {
+  const on = [1,2,5,6].includes(i);
+  const expect = { green:on };
+  if (both) expect.red = !on;
+  if (coil) expect[coil] = on;
+  return [phase,expect];
+});
+const tourSteps = kind => [
+  ...tours[kind].map(([a,b,text]) => ({ wire:[a,b], text })),
+  ...actSteps(latch(true).slice(0,5), testTexts[kind])
+];
+const tourSolution = kind => tours[kind].map(([a,b]) => a + "/" + b).join(" ");
+
+// คำอธิบายสายแต่ละเส้น ใช้ตอนสาธิตแบบฝึก
+const wireNotes = new Map(Object.values(tours).flat().map(([a,b,text]) => [[a,b].sort().join("/"), text]));
+[
+  ["K1-1O","Gp","ต่อ NO ชุด 1 ของ K1 ไปขั้ว + ของหลอด RUN — หลอดติดเมื่อคอยล์ K1 ทำงาน"],
+  ["K1-1N","Rp","ต่อ NC ชุด 1 ของ K1 ไปขั้ว + ของหลอด STOP — หลอดติดเมื่อคอยล์ K1 ไม่ทำงาน"],
+  ["K1-2O","K2-A1","ต่อ NO ชุด 2 ของ K1 เข้าคอยล์ K2 — เมื่อ K1 ค้าง K2 ก็ทำงานตาม"],
+  ["K2-1O","Gp","ต่อ NO ชุด 1 ของ K2 ไปขั้ว + ของหลอด RUN"],
+  ["K2-1N","Rp","ต่อ NC ชุด 1 ของ K2 ไปขั้ว + ของหลอด STOP"]
+].forEach(([a,b,text]) => wireNotes.set([a,b].sort().join("/"), text));
+function wireNote(a, b) {
+  const known = wireNotes.get([a,b].sort().join("/"));
+  if (known) return known;
+  const [p, q] = a === "P" || a === "N" ? [a,b] : [b,a];
+  if (p === "P") return "จ่าย +24V ไปที่ " + pinName(q);
+  if (p === "N") return "ต่อ " + pinName(q) + " ลง 0V";
+  if (/^X\d$/.test(b)) return "ต่อ " + pinName(a) + " เข้าอินพุต " + b;
+  if (/^X\d$/.test(a)) return "ต่อ " + pinName(b) + " เข้าอินพุต " + a;
+  if (/^Y\d$/.test(a)) return "ต่อเอาต์พุต " + a + " ไปที่ " + pinName(b);
+  if (/^Y\d$/.test(b)) return "ต่อเอาต์พุต " + b + " ไปที่ " + pinName(a);
+  return "ต่อ " + pinName(a) + " ไปยัง " + pinName(b);
+}
+
+// ---------- แบบฝึก (แต่ละข้อมีบทเรียนทีละขั้น) ----------
+// lesson: ["ขั้วA","ขั้วB","คำอธิบาย"] = ต่อสาย 1 เส้น, { info:"..." } = ขั้นอธิบาย (focus:"ladder" = ชี้ไปที่ Ladder)
+const relayLatch = [
+  ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของปุ่ม Stop — Stop (NC) อยู่ต้นทางไฟของวงจรควบคุมทั้งหมด"],
+  ["Tb","Sa","ต่อขั้ว 12 ของ Stop ไปขั้ว 13 ของ Start — Stop อนุกรมอยู่หน้า Start"],
+  ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้าคอยล์ K1 ขั้ว A1"],
+  ["N","K1-A2","ต่อคอยล์ K1 ขั้ว A2 ลง 0V — ถึงตรงนี้กด Start แล้วคอยล์ทำงานเฉพาะตอนกด"],
+  ["Tb","K1-1C","ต่อขั้ว 12 ของ Stop ไป COM ชุด 1 ของ K1 — ทางไฟค้างต้องผ่าน Stop ด้วย กด Stop จึงตัดได้"],
+  ["K1-1O","K1-A1","ต่อ NO ชุด 1 กลับเข้า A1 — หน้าสัมผัสนี้ขนานกับ Start เมื่อ K1 ทำงานจะเลี้ยงคอยล์ตัวเองต่อ (self-holding)"]
+];
+const exercises = {
+  plc: [
+    { title:"Start เข้าอินพุต X0",
+      goal:"ต่อ <b>+24V → Start (13–14) → X0</b> และต่อ <b>S/S ลง 0V</b> ให้ LED X0 บน PLC ติดเฉพาะตอนกด Start",
+      intro:"ข้อนี้ฝึกต่อ <b>อินพุต</b> ของ PLC — ปุ่ม Start เป็นหน้าสัมผัส NO เมื่อกดจะส่ง +24V เข้า X0 ไฟไหลผ่านวงจรอินพุตภายใน แล้วกลับทาง S/S ลง 0V ทำให้ LED X0 ติด",
+      program:[], ladderText:"ข้อนี้ยังไม่ใช้ Ladder — ดูผลที่ LED <b>X0</b> บนหน้า PLC",
+      lesson:[
+        ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start — เป็นต้นทางไฟของปุ่ม"],
+        ["Sb","X0","ต่อขั้ว 14 (ฝั่งออกของปุ่ม) เข้า X0 — กดปุ่มเมื่อไหร่ X0 ได้ +24V"],
+        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุตแบบ sink ถ้าไม่ต่อ LED X0 จะไม่ติดแม้กดปุ่ม"]
+      ],
+      requires:["X0","SS"], test:jog("X0") },
+    { title:"Stop (NC) เข้าอินพุต X1",
+      goal:"ต่อ <b>+24V → Stop (11–12) → X1</b> และ S/S ลง 0V ปกติ LED X1 ต้องติด และดับเมื่อกด Stop",
+      intro:"ปุ่ม Stop เป็นหน้าสัมผัส <b>NC (ปกติปิด)</b> ไฟจึงเข้า X1 ตลอด และ <b>ถูกตัด</b> เมื่อกด — ใช้ NC กับปุ่มหยุดเพราะถ้าสายขาด เครื่องจะหยุดเอง (fail-safe)",
+      program:[], ladderText:"ข้อนี้ยังไม่ใช้ Ladder — ดูผลที่ LED <b>X1</b> บนหน้า PLC",
+      lesson:[
+        ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของ Stop"],
+        ["Tb","X1","ต่อขั้ว 12 ของ Stop เข้า X1 — ไม่กดปุ่ม ไฟก็เข้า X1 แล้ว"],
+        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุต"]
+      ],
+      requires:["X1","SS"], test:[["idle",{X1:true}],["stop",{X1:false}],["idle",{X1:true}]] },
+    { title:"X2 → Y2 จุดหลอด RUN",
+      goal:"ต่อ Start เข้า <b>X2</b> ต่อ <b>COM0 เข้า +24V</b> แล้วใช้ <b>Y2</b> จุดหลอด RUN (ขั้ว − ลง 0V) หลอดติดเฉพาะตอนกด Start",
+      intro:"ข้อนี้ต่อครบเส้นทาง <b>อินพุต → Ladder → เอาต์พุต</b>: Start ส่งไฟเข้า X2 → Ladder สั่ง Y2 → หน้าสัมผัสเอาต์พุต Y2 ส่ง +24V จาก COM0 ไปหลอด RUN",
+      program:[rung([[c("X2")]],"Y2")],
+      ladderText:"<b>Rung 1: [X2]──(Y2)</b> — เมื่อ X2 มีไฟ คอยล์ Y2 ทำงาน",
+      lesson:[
+        ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
+        ["Sb","X2","ต่อขั้ว 14 ของ Start เข้า X2 — เป็นสัญญาณอินพุตของ Rung 1"],
+        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุต"],
+        { info:"ดู Ladder ด้านล่าง: <b>[X2]──(Y2)</b> เมื่อ X2 ติด หน้าสัมผัส X2 ใน Ladder ปิด คอยล์ Y2 ทำงาน และหน้าสัมผัสเอาต์พุต Y2 ที่ตัวเครื่องจะต่อวงจร", focus:"ladder" },
+        ["P","COM","ต่อ COM0 เข้า +24V — เอาต์พุต Y0–Y3 เป็นหน้าสัมผัสรีเลย์ ต้องจ่ายไฟให้ COM เอง"],
+        ["Y2","Gp","ต่อ Y2 ไปขั้ว + ของหลอด RUN — Y2 ทำงานเมื่อไหร่ +24V จาก COM0 จะผ่านมาที่หลอด"],
+        ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V ให้ครบวงจร"]
+      ],
+      requires:["X2","Y2"], test:jog("green") },
+    { title:"X3 → Y3 จุดหลอด STOP",
+      goal:"ต่อ Stop เข้า <b>X3</b> แล้วใช้ <b>Y3</b> จุดหลอด STOP ให้หลอดติดตลอด และดับขณะกด Stop",
+      intro:"ใช้ปุ่ม Stop (NC) เป็นอินพุต X3 แล้วให้ Ladder ส่งต่อไปที่ Y3 — หลอด STOP จึงติดตลอดเวลาที่ไม่ได้กด Stop",
+      program:[rung([[c("X3")]],"Y3")],
+      ladderText:"<b>Rung 1: [X3]──(Y3)</b> — X3 มีไฟอยู่ตลอดเพราะ Stop เป็น NC จึงสั่ง Y3 ตลอด",
+      lesson:[
+        ["P","Ta","จ่าย +24V เข้าขั้ว 11 ของ Stop"],
+        ["Tb","X3","ต่อขั้ว 12 ของ Stop เข้า X3"],
+        ["N","SS","ต่อ S/S ลง 0V — ปิดวงจรอินพุต"],
+        { info:"ดู Ladder ด้านล่าง: <b>[X3]──(Y3)</b> X3 ติดตลอด (Stop เป็น NC) Y3 จึงทำงานตลอด และดับเมื่อกด Stop", focus:"ladder" },
+        ["P","COM","ต่อ COM0 เข้า +24V — ไฟเลี้ยงของเอาต์พุต Y0–Y3"],
+        ["Y3","Rp","ต่อ Y3 ไปขั้ว + ของหลอด STOP"],
+        ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
+      ],
+      requires:["X3","Y3"], test:[["idle",{red:true}],["stop",{red:false}],["idle",{red:true}]] },
+    { title:"Start–Stop ค้างสถานะ (ต่อสายเอง)",
+      goal:"Start → <b>X0</b>, Stop → <b>X1</b>, <b>Y0</b> → หลอด RUN, <b>Y1</b> → หลอด STOP ให้ RUN ค้างหลังปล่อย Start และดับเมื่อกด Stop",
+      intro:"วงจร Start–Stop ค้างสถานะด้วย PLC — <b>การค้างอยู่ใน Ladder ไม่ใช่ในสาย</b> สายมีแค่ปุ่มเข้าอินพุต และเอาต์พุตไปหลอด ต่างจากวงจรรีเลย์ที่ต้องเดินสายหน้าสัมผัสค้าง",
+      program:DEFAULT_LADDER.slice(0,2),
+      ladderText:"<b>Rung 1: [X1]─[X0 ‖ Y0]─(Y0)</b> ค้างสถานะด้วย Y0 ขนาน X0 · <b>Rung 2: [/Y0]─(Y1)</b> หลอด STOP ติดเมื่อไม่ RUN",
+      lesson:[
+        { info:"ดู Ladder ด้านล่าง: <b>Rung 1</b> ต้องมี X1 (Stop) ก่อน แล้ว X0 (Start) <b>หรือ</b> Y0 เอง จึงสั่ง Y0 — Y0 ที่ขนาน X0 คือตัวค้าง · <b>Rung 2</b> NC Y0 สั่ง Y1", focus:"ladder" },
+        ...tours.plc
+      ],
+      requires:["X0","X1","Y0","Y1"], test:latch(true) },
+    { ladder:true, title:"เขียน Ladder: X0 สั่ง Y0",
+      goal:"ต่อสายไว้ให้แล้ว (Start→X0, Stop→X1, Y0→หลอด RUN, Y1→หลอด STOP) เขียน Ladder ให้ <b>หลอด RUN ติดเฉพาะตอนกด Start</b>",
+      intro:"สายต่อไว้ครบแล้ว ข้อนี้ฝึก <b>เขียน Ladder</b> — Ladder อ่านจากซ้ายไปขวา: ถ้าหน้าสัมผัสทางซ้ายปิด ไฟไหลถึงคอยล์ทางขวา คอยล์ก็ทำงาน",
+      ladderText:"เขียนโปรแกรมที่นี่ — เป้าหมาย: <b>[X0]──(Y0)</b>",
+      wires:tourSolution("plc"), requires:[], test:jog("green"),
+      solutionProgram:[rung([[c("X0")]],"Y0")],
+      ladderSteps:[
+        { ladder:[rung([[c("X0")]],"Y0")],
+          text:"กด <b>+ เพิ่ม Rung</b> จะได้หน้าสัมผัส NO <b>X0</b> สั่งคอยล์ <b>Y0</b> — เมื่อ X0 มีไฟ Y0 ทำงาน หลอด RUN ติด" }
+      ] },
+    { ladder:true, title:"เขียน Ladder: Start–Stop ค้างสถานะ",
+      goal:"ต่อสายไว้ให้แล้ว เขียน Ladder ให้กด Start แล้ว <b>หลอด RUN ติดค้าง</b> กด Stop แล้วดับ และ <b>หลอด STOP ติดเมื่อไม่ได้ RUN</b>",
+      intro:"เขียน Ladder ค้างสถานะเอง — ใช้หลักเดียวกับรีเลย์: เงื่อนไขหยุด (X1) <b>อนุกรม</b> อยู่หน้า และหน้าสัมผัสของคอยล์เอง (Y0) <b>ขนาน</b> กับปุ่ม Start (X0)",
+      ladderText:"เขียนโปรแกรมที่นี่ — เป้าหมาย: <b>[X1]─[X0 ‖ Y0]─(Y0)</b> และ <b>[/Y0]─(Y1)</b>",
+      wires:tourSolution("plc"), requires:[], test:latch(true),
+      solutionProgram:DEFAULT_LADDER.slice(0,2),
+      ladderSteps:[
+        { ladder:[rung([[c("X1")]],"Y0")],
+          text:"กด <b>+ เพิ่ม Rung</b> คลิกหน้าสัมผัสแล้วเปลี่ยนเป็น <b>X1</b> — X1 มาจาก Stop (NC) เป็นเงื่อนไขอนุญาตให้ทำงาน" },
+        { ladder:[rung([[c("X1")],[c("X0")]],"Y0")],
+          text:"กด <b>+</b> ท้าย Rung เพื่อเพิ่มหน้าสัมผัส <b>X0</b> (Start) ต่ออนุกรมหลัง X1" },
+        { ladder:[rung([[c("X1")],[c("X0"),c("Y0")]],"Y0")],
+          text:"คลิก X0 แล้วกด <b>+ ขนาน</b> ตั้งเป็น <b>Y0</b> — หน้าสัมผัส Y0 ขนาน X0 คือการค้างสถานะ (self-holding)" },
+        { ladder:DEFAULT_LADDER.slice(0,2),
+          text:"เพิ่ม Rung ที่ 2: หน้าสัมผัส <b>NC Y0</b> สั่งคอยล์ <b>Y1</b> ให้หลอด STOP ติดเมื่อ Y0 ไม่ทำงาน" }
+      ] }
+  ],
+  relay: [
+    { title:"Start สั่งคอยล์ K1",
+      goal:"ต่อ <b>+24V → Start (13–14) → K1 A1</b> และ <b>A2 ลง 0V</b> ให้ LED COIL ของ K1 ติดเฉพาะตอนกด Start",
+      intro:"รีเลย์มี <b>คอยล์ (A1–A2)</b> เป็นแม่เหล็กไฟฟ้า เมื่อมีไฟ 24V คร่อมคอยล์ หน้าสัมผัสทุกชุดจะสลับ — ข้อนี้ใช้ปุ่ม Start สั่งคอยล์โดยตรง",
+      lesson:[
+        ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
+        ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้า A1 ของ K1 — ฝั่ง + ของคอยล์"],
+        ["N","K1-A2","ต่อ A2 ลง 0V — ครบวงจรคอยล์ กด Start แล้ว LED COIL จะติด"]
+      ],
+      requires:["K1-A1","K1-A2"], test:jog("K1") },
+    { title:"NO ของ K1 จุดหลอด RUN",
+      goal:"สั่งคอยล์ K1 ด้วย Start แบบข้อ 1 แล้วจ่าย +24V ผ่าน <b>COM–NO</b> ของ K1 ไปหลอด RUN ให้หลอดติดเฉพาะตอนกด Start",
+      intro:"หน้าสัมผัสแต่ละชุดมี 3 ขั้ว: <b>COM</b> (ขั้วกลาง), <b>NO</b> (ปกติเปิด), <b>NC</b> (ปกติปิด) — เมื่อคอยล์ทำงาน COM จะต่อกับ NO",
+      lesson:[
+        ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
+        ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้า A1 ของ K1"],
+        ["N","K1-A2","ต่อ A2 ลง 0V — วงจรคอยล์ครบแล้ว"],
+        ["P","K1-1C","จ่าย +24V เข้า COM ชุด 1 — ไฟที่จะส่งผ่านหน้าสัมผัส"],
+        ["K1-1O","Gp","ต่อ NO ชุด 1 ไปขั้ว + ของหลอด RUN — ไฟผ่านเมื่อ K1 ทำงาน"],
+        ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"]
+      ],
+      requires:["K1-A1",NO("K1")], test:jog("green") },
+    { title:"NC ของ K1 จุดหลอด STOP",
+      goal:"สั่งคอยล์ K1 ด้วย Start แล้วจ่าย +24V ผ่าน <b>COM–NC</b> ของ K1 ไปหลอด STOP ให้หลอดติดตลอด และดับขณะกด Start",
+      intro:"<b>NC</b> ต่อกับ COM ตอนคอยล์ <b>ไม่ทำงาน</b> และแยกออกเมื่อคอยล์ทำงาน — นิยมใช้ทำไฟแสดงสถานะ \"หยุด\"",
+      lesson:[
+        ["P","Sa","จ่าย +24V เข้าขั้ว 13 ของ Start"],
+        ["Sb","K1-A1","ต่อขั้ว 14 ของ Start เข้า A1 ของ K1"],
+        ["N","K1-A2","ต่อ A2 ลง 0V"],
+        ["P","K1-1C","จ่าย +24V เข้า COM ชุด 1"],
+        ["K1-1N","Rp","ต่อ NC ชุด 1 ไปขั้ว + ของหลอด STOP — ไฟผ่านตอน K1 ไม่ทำงาน และถูกตัดเมื่อ K1 ทำงาน"],
+        ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
+      ],
+      requires:["K1-A1",NC("K1")], test:[["idle",{red:true}],["start",{red:false}],["idle",{red:true}]] },
+    { title:"ค้างคอยล์ K1 ด้วยหน้าสัมผัสช่วย",
+      goal:"ต่อ <b>Stop อนุกรมกับ Start</b> เข้าคอยล์ K1 ใช้ <b>NO ของ K1 ต่อขนาน Start</b> เพื่อค้าง และใช้ NO อีกชุดจุดหลอด RUN",
+      intro:"Self-holding ด้วยรีเลย์: ใช้หน้าสัมผัส <b>NO ของ K1 เอง</b> ต่อขนานกับ Start เมื่อ K1 ทำงานแล้วจะเลี้ยงคอยล์ตัวเองต่อ และวาง Stop (NC) อนุกรมไว้ด้านหน้าเพื่อตัด",
+      lesson:[
+        ...relayLatch,
+        ["P","K1-2C","จ่าย +24V เข้า COM ชุด 2 — ใช้ชุดที่ 2 แยกไว้สำหรับหลอด"],
+        ["K1-2O","Gp","ต่อ NO ชุด 2 ไปขั้ว + ของหลอด RUN"],
+        ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"]
+      ],
+      requires:["K1-A1",NO("K1")], test:latch(false,"K1") },
+    { title:"K1 สั่ง K2 จุดหลอด",
+      goal:"ทำวงจรค้าง K1 แบบข้อ 4 แล้วใช้ NO ของ K1 <b>สั่งคอยล์ K2</b> ให้ <b>NO ของ K2</b> จุดหลอด RUN และ <b>NC ของ K2</b> จุดหลอด STOP",
+      intro:"ต่อยอดจากข้อ 4: K1 เป็นตัวค้างสถานะ แล้วให้หน้าสัมผัสของ K1 ไปสั่งคอยล์ <b>K2</b> อีกทอด เหมือนรีเลย์ช่วยที่เพิ่มจำนวนหน้าสัมผัส — ขั้นแรกทำวงจรค้าง K1 ก่อน",
+      lesson:[
+        ...relayLatch,
+        { info:"วงจรค้าง K1 เสร็จแล้ว (6 เส้นแรก) — ต่อไปใช้ <b>หน้าสัมผัสชุด 2 ของ K1</b> เป็นสวิตช์สั่งคอยล์ K2" },
+        ["P","K1-2C","จ่าย +24V เข้า COM ชุด 2 ของ K1 — ทางไฟที่จะไปสั่ง K2"],
+        ["K1-2O","K2-A1","ต่อ NO ชุด 2 ของ K1 เข้า A1 ของ K2 — K1 ทำงานเมื่อไหร่ K2 ก็ทำงานตาม"],
+        ["N","K2-A2","ต่อ A2 ของ K2 ลง 0V — ครบวงจรคอยล์ K2"],
+        ["P","K2-1C","จ่าย +24V เข้า COM ชุด 1 ของ K2 — ไฟสำหรับหลอดทั้งสอง"],
+        ["K2-1O","Gp","ต่อ NO ชุด 1 ของ K2 ไปหลอด RUN — ติดเมื่อ K2 ทำงาน"],
+        ["K2-1N","Rp","ต่อ NC ชุด 1 ของ K2 ไปหลอด STOP — ติดเมื่อ K2 ไม่ทำงาน"],
+        ["N","Gn","ต่อขั้ว − ของหลอด RUN ลง 0V"],
+        ["N","Rn","ต่อขั้ว − ของหลอด STOP ลง 0V"]
+      ],
+      requires:["K2-A1",NO("K2"),NC("K2")], test:latch(true,"K2") }
+  ]
+};
+// ---------- วงจรไฟฟ้า (Control circuit) ของฝั่ง Relay ----------
+// แต่ละบรรทัด = เส้นทางไฟจาก +24V (ซ้าย) ผ่านหน้าสัมผัส (อนุกรม/ขนาน) ไปยังโหลด แล้วลง 0V (ขวา)
+const PB_START = { t:"pb", key:"start" }, PB_STOP = { t:"pb", key:"stop" };
+const kNO = (relay, set) => ({ t:"k", relay, set, no:true });
+const kNC = (relay, set) => ({ t:"k", relay, set, no:false });
+const COIL = relay => ({ t:"coil", relay });
+const LAMP = g => ({ t:"lamp", g });
+const line = (blocks, load) => ({ blocks, load });
+const latchK1 = line([[PB_STOP],[PB_START, kNO("K1",1)]], COIL("K1"));
+const relayTourCircuit = [latchK1, line([[kNO("K1",2)]], LAMP("G")), line([[kNC("K1",2)]], LAMP("R"))];
+[
+  [line([[PB_START]], COIL("K1"))],
+  [line([[PB_START]], COIL("K1")), line([[kNO("K1",1)]], LAMP("G"))],
+  [line([[PB_START]], COIL("K1")), line([[kNC("K1",1)]], LAMP("R"))],
+  [latchK1, line([[kNO("K1",2)]], LAMP("G"))],
+  [latchK1, line([[kNO("K1",2)]], COIL("K2")), line([[kNO("K2",1)]], LAMP("G")), line([[kNC("K2",1)]], LAMP("R"))]
+].forEach((circuit, i) => { exercises.relay[i].circuit = circuit; });
+// ข้อมูลของแต่ละสัญลักษณ์: ชื่อ, ขั้ว, สถานะปิด/ทำงาน
+function circuitPart(el, st, sim) {
+  const idx = id => relays.indexOf(id);
+  if (el.t === "pb") return el.key === "start"
+    ? { name:"Start", sub:"13–14 · NO", type:"NO", pins:["Sa","Sb"], on:st.start }
+    : { name:"Stop", sub:"11–12 · NC", type:"NC", pins:["Ta","Tb"], on:!st.stop };
+  if (el.t === "k") {
+    const base = el.relay + "-" + el.set;
+    return { name:el.relay + " ชุด " + el.set, sub:el.no ? "COM–NO" : "COM–NC", type:el.no ? "NO" : "NC",
+      pins:[base + "C", base + (el.no ? "O" : "N")], on:Boolean(st.coils[idx(el.relay)]) === el.no };
+  }
+  if (el.t === "coil") return { name:el.relay, sub:"A1–A2", pins:[el.relay + "-A1", el.relay + "-A2"], on:Boolean(sim.coils[idx(el.relay)]) };
+  return el.g === "G"
+    ? { name:"RUN", sub:"+ / −", pins:["Gp","Gn"], on:sim.green }
+    : { name:"STOP", sub:"+ / −", pins:["Rp","Rn"], on:sim.red };
+}
+
+// เฉลยสายของแต่ละข้อ = สายทั้งหมดในบทเรียน
+for (const ex of Object.values(exercises).flat()) {
+  if (ex.lesson) ex.solution = ex.lesson.filter(Array.isArray).map(([a,b]) => a + "/" + b).join(" ");
+}
+// ขั้นเรียนของแบบฝึก: แนะนำ → ต่อสาย/อ่าน Ladder ทีละขั้น → เขียน Ladder (ถ้ามี) → ทดสอบตามโจทย์
+const exerciseSteps = ex => [
+  { info:ex.intro + (ex.circuit ? ' <span class="how">— ดู <b>วงจรไฟฟ้า</b> ใต้แผงประกอบ</span>' : ""), focus:"diagram" },
+  ...(ex.lesson || []).map(item => Array.isArray(item)
+    ? { wire:[item[0],item[1]], text:item[2] || wireNote(item[0],item[1]) }
+    : { info:item.info, focus:item.focus }),
+  ...(ex.ladderSteps || []).map(step => ({ ladder:step.ladder, text:step.text })),
+  ...actSteps(ex.test)
+];
+
+function simulate(state, kind) {
+  const off = { run:false, green:false, red:false, coils:[false,false], signals:{}, mem:{} };
+  if (!state.power) return off;
+  function nets(edges) {
+    function reachable(from) {
+      const visited = new Set([from]);
+      for (const terminal of visited) {
+        for (const [a,b] of edges) {
+          if (terminal === a) visited.add(b);
+          if (terminal === b) visited.add(a);
+        }
+      }
+      return visited;
+    }
+    return { positive:reachable("P"), negative:reachable("N") };
+  }
+  const wires = [...state.wires];
+  if (state.start) wires.push(["Sa","Sb"]);
+  if (!state.stop) wires.push(["Ta","Tb"]);
+  const voltage = (network, plus, minus) => network.positive.has(plus) && network.negative.has(minus);
+  function relayNetwork(coils) {
+    return nets([...wires, ...relays.flatMap((id,index) => contactSets.map(set => {
+      const contact = id + "-" + set;
+      return [contact + "C",contact + (coils[index] ? "O" : "N")];
+    }))]);
+  }
+  function lamps(network) {
+    return { green:voltage(network,"Gp","Gn"), red:voltage(network,"Rp","Rn") };
+  }
+  if (kind === "relay") {
+    let coils = state.coils;
+    const visited = new Set();
+    while (!visited.has(coils.join(","))) {
+      visited.add(coils.join(","));
+      const network = relayNetwork(coils);
+      if (network.positive.has("N")) return { ...off, fault:"ลัดวงจร +24 V ถึง 0 V ระบบตัดไฟ" };
+      const next = relays.map(id => voltage(network,id + "-A1",id + "-A2") ||
+        voltage(network,id + "-A2",id + "-A1"));
+      if (next.every((value,index) => value === coils[index])) {
+        return { ...lamps(network), coils, run:coils.some(Boolean), signals:{ K1:coils[0], K2:coils[1] }, mem:{} };
+      }
+      coils = next;
+    }
+    return { ...off, fault:"รีเลย์สลับสถานะซ้ำ ระบบตัดไฟ" };
+  }
+  const input = nets(wires);
+  const X = Object.fromEntries(channels.map(i => ["X" + i, voltage(input,"X" + i,"SS")]));
+  const mem = runLadder(state.program || DEFAULT_LADDER, X, state.mem || {});
+  const outputs = channels.map(i => Boolean(mem["Y" + i]));
+  const network = nets([...wires, ...channels.filter(i => outputs[i]).map(i => [i < 4 ? "COM" : "COM1","Y" + i])]);
+  if (network.positive.has("N")) return { ...off, fault:"ลัดวงจร +24 V ถึง 0 V ระบบตัดไฟ" };
+  const signals = { ...mem, ...X, ...Object.fromEntries(channels.map(i => ["Y" + i, outputs[i]])) };
+  return { ...lamps(network), coils:off.coils, run:outputs[0], signals, mem };
+}
+
+const readSignal = (key, result) => Boolean(key === "green" ? result.green : key === "red" ? result.red : result.signals[key]);
+function mismatch(expect, result) {
+  for (const [key, want] of Object.entries(expect)) {
+    const got = readSignal(key, result);
+    if (got !== want) return signalName(key) + " ควร" + (want ? "ติด" : "ดับ") + " แต่" + (got ? "ติด" : "ดับ");
+  }
+  return null;
+}
+
+// ตรวจคำตอบ: จำลองการกดปุ่มตามโจทย์ แล้วเทียบผลกับที่คาดไว้ (ไม่บังคับว่าต้องเหมือนเฉลยทุกเส้น)
+function check(kind, exercise, wires, program) {
+  for (const need of exercise.requires) {
+    const [list, name] = typeof need === "string" ? [[need], pinName(need)] : need;
+    if (!wires.some(wire => list.some(id => wire.includes(id)))) return "ยังไม่ได้ใช้ " + name;
+  }
+  const state = { wires, program, mem:{}, power:true, start:false, stop:false, run:false, coils:[false,false] };
+  for (const [phase, expect] of exercise.test) {
+    const [start, stop, label] = phases[phase];
+    state.start = start;
+    state.stop = stop;
+    const result = simulate(state, kind);
+    if (result.fault) return result.fault;
+    state.run = result.run;
+    state.coils = result.coils;
+    state.mem = result.mem;
+    const wrong = mismatch(expect, result);
+    if (wrong) return "ตอน" + label + " " + wrong;
+  }
+  return null;
+}
+
+function mount(kind, title, subtitle) {
+  const state = { wires:[], selected:null, power:false, start:false, stop:false, run:false, coils:[false,false],
+    mem:{}, program:kind === "plc" ? clone(DEFAULT_LADDER) : null };
+  const list = exercises[kind];
+  const solved = new Set();
+  let mode = null;
+  let ladSel = null;     // [rung, block, index] ของหน้าสัมผัสที่เลือกใน Ladder
+  let anim = null;       // สายที่กำลังแสดงแอนิเมชันการต่อ
+  let playTimer = null;  // ตัวจับเวลาโหมดสาธิตอัตโนมัติ
+  const ANIM_MS = 900;
+  const panel = document.createElement("article");
+  panel.innerHTML = '<div class="heading"><h2>' + title + '</h2><small>' + subtitle + '</small></div>' +
+    '<div class="guide" hidden></div>' +
+    '<div class="board"><div class="row">' +
+    device('<strong>แหล่งจ่าย</strong><small>24 VDC</small>' +
+      '<button type="button" class="power" data-action="power" role="switch" aria-checked="false" aria-label="สวิตช์จ่ายไฟ">' +
+      '<span class="on-txt">ON</span><span class="track"><span class="knob"></span></span><span class="off-txt">OFF</span></button>' +
+      pins(pin("P","+24V"),pin("N","0V")), "supply") +
+    buttonDevice("Start","NO","S",false) + buttonDevice("Stop","NC","T",true) +
+    '</div><div class="rail">' + (kind === "plc" ? device(plc,"controller") : relayBank) +
+    '</div><div class="row">' + lamp("G","RUN",false) + lamp("R","STOP",true) +
+    '</div><canvas aria-hidden="true"></canvas>' +
+    '<button type="button" class="wire-del" data-action="delwire" aria-label="ลบสายที่เลือก" title="ลบสายนี้" hidden>×</button>' +
+    '</div><div class="toolbar">' +
+    '<button class="action primary" data-action="example">ตัวอย่างทีละขั้น</button>' +
+    '<select class="action" aria-label="เลือกแบบฝึก"><option value="">แบบฝึก…</option>' +
+    list.map((ex,i) => '<option value="' + i + '">' + (i + 1) + '. ' + ex.title + '</option>').join("") + '</select>' +
+    '<button class="action" data-action="undo">ย้อนสาย</button><button class="action" data-action="reset">ล้างสาย</button></div>' +
+    '<p class="status" aria-live="polite"></p>' +
+    (kind === "plc" ? '<section class="ladder"><div class="ladder-head"><div><h3>โปรแกรม Ladder</h3>' +
+      '<small>แก้ไขได้ทันที ทั้งตอนปิดและเปิดไฟ · สีเขียว = หน้าสัมผัสปิด/คอยล์ทำงาน</small></div><div class="ladder-tools">' +
+      '<button type="button" class="action" data-lad="addrung">+ เพิ่ม Rung</button>' +
+      '<button type="button" class="action" data-lad="default">โปรแกรมเริ่มต้น</button>' +
+      '<button type="button" class="action" data-lad="clear">ล้าง Ladder</button></div></div>' +
+      '<p class="ladder-note" hidden></p><div class="ladder-body"></div><div class="ladder-edit"></div></section>'
+    : '<section class="ladder schematic"><div class="ladder-head"><div><h3>วงจรไฟฟ้า</h3>' +
+      '<small>อ่านจาก +24V (ซ้าย) ผ่านหน้าสัมผัสไปยังคอยล์/หลอด แล้วลง 0V (ขวา) · สีเขียว = หน้าสัมผัสปิด/โหลดทำงาน</small></div></div>' +
+      '<p class="ladder-note" hidden></p><div class="rails"><span>+24V</span><span>0V</span></div><div class="ladder-body"></div></section>');
+  document.getElementById("panels").append(panel);
+
+  const board = panel.querySelector(".board");
+  const canvas = panel.querySelector("canvas");
+  const terminals = new Map([...panel.querySelectorAll(".pin")].map(el => [el.dataset.pin,el]));
+  const status = panel.querySelector(".status");
+  const power = panel.querySelector(".power");
+  const guide = panel.querySelector(".guide");
+  const select = panel.querySelector("select");
+  const delButton = panel.querySelector(".wire-del");
+  const ladder = panel.querySelector(".ladder:not(.schematic)");
+  const schematic = panel.querySelector(".schematic");
+  const colors = ["#f6a654","#66c7ff","#ed8998","#a7df79","#c9a9ff","#ffe06b"];
+  const hasWire = ([a,b]) => state.wires.some(wire => sameWire(wire,a,b));
+  let geometry = [];   // จุดบนเส้นสายแต่ละเส้น ใช้หาว่าคลิกโดนสายไหน
+  let hovered = null;
+  let routeCache = { key:"", routes:[] };
+
+  // ---------- เดินสายหลบอุปกรณ์: หาเส้นทางแนวตั้ง/แนวนอนบนตาราง (A*) รอบตัวอุปกรณ์ ----------
+  function routeWires(wires, rect) {
+    const G = 6, MARGIN = 6, BEND = 3, CROWD = 4;
+    const cols = Math.ceil(rect.width / G), rows = Math.ceil(rect.height / G);
+    const rel = el => {
+      const b = el.getBoundingClientRect();
+      return { left:b.left - rect.left, right:b.right - rect.left, top:b.top - rect.top, bottom:b.bottom - rect.top };
+    };
+    const blocked = new Uint8Array(cols * rows);
+    for (const el of board.querySelectorAll(".device")) {
+      const d = rel(el);
+      for (let r = Math.max(0, Math.floor((d.top - MARGIN) / G)); r < Math.min(rows, Math.ceil((d.bottom + MARGIN) / G)); r++) {
+        for (let c = Math.max(0, Math.floor((d.left - MARGIN) / G)); c < Math.min(cols, Math.ceil((d.right + MARGIN) / G)); c++) {
+          const x = c * G + G / 2, y = r * G + G / 2;
+          if (x > d.left - MARGIN && x < d.right + MARGIN && y > d.top - MARGIN && y < d.bottom + MARGIN) blocked[r * cols + c] = 1;
+        }
+      }
+    }
+    const crowd = new Uint8Array(cols * rows);
+    // ขั้วอยู่ครึ่งบนของอุปกรณ์ → สายออกด้านบน, ครึ่งล่าง → ออกด้านล่าง
+    const info = id => {
+      const el = terminals.get(id);
+      const b = rel(el), d = rel(el.closest(".device"));
+      return { x:(b.left + b.right) / 2, w:b.right - b.left, top:b.top, bottom:b.bottom, device:d,
+        dir:(b.top + b.bottom) / 2 < (d.top + d.bottom) / 2 ? -1 : 1 };
+    };
+    const ends = wires.map(([a,b]) => {
+      const A = info(a), B = info(b);
+      return [{ id:a, ...A, other:B.x }, { id:b, ...B, other:A.x }];
+    });
+    const fan = new Map();
+    ends.flat().forEach(end => { if (!fan.has(end.id)) fan.set(end.id, []); fan.get(end.id).push(end); });
+    for (const list of fan.values()) {
+      list.sort((p,q) => p.other - q.other);
+      const gap = Math.min(6, (list[0].w - 8) / Math.max(1, list.length - 1));
+      list.forEach((end,k) => { end.x += (k - (list.length - 1) / 2) * gap; });
+    }
+    const clampCol = x => Math.max(0, Math.min(cols - 1, Math.floor(x / G)));
+    const startCell = end => {
+      const c = clampCol(end.x);
+      let r = Math.floor((end.dir < 0 ? end.device.top - MARGIN - 1 : end.device.bottom + MARGIN + 1) / G);
+      r = Math.max(0, Math.min(rows - 1, r));
+      for (let k = 0; k < 12 && blocked[r * cols + c]; k++) r = Math.max(0, Math.min(rows - 1, r + end.dir));
+      return { c, r };
+    };
+    const DX = [0,1,0,-1], DY = [-1,0,1,0];
+    function search(s, sd, g, gd) {
+      const total = cols * rows * 4;
+      const cost = new Float32Array(total).fill(Infinity);
+      const prev = new Int32Array(total).fill(-1);
+      const done = new Uint8Array(total);
+      const heap = [];
+      const push = (f, v) => {
+        heap.push([f,v]);
+        for (let i = heap.length - 1; i > 0;) {
+          const p = (i - 1) >> 1;
+          if (heap[p][0] <= heap[i][0]) break;
+          [heap[p], heap[i]] = [heap[i], heap[p]];
+          i = p;
+        }
+      };
+      const pop = () => {
+        const top = heap[0], last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          for (let i = 0;;) {
+            const l = 2 * i + 1, r = l + 1;
+            let m = i;
+            if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+            if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+            if (m === i) break;
+            [heap[m], heap[i]] = [heap[i], heap[m]];
+            i = m;
+          }
+        }
+        return top;
+      };
+      const h = (c, r) => Math.abs(c - g.c) + Math.abs(r - g.r);
+      const first = (s.r * cols + s.c) * 4 + sd;
+      cost[first] = 0;
+      push(h(s.c, s.r), first);
+      let found = -1;
+      while (heap.length) {
+        const [, v] = pop();
+        if (done[v]) continue;
+        done[v] = 1;
+        const cell = v >> 2, d = v & 3, c = cell % cols, r = (cell - c) / cols;
+        if (c === g.c && r === g.r) { found = v; break; }
+        for (let nd = 0; nd < 4; nd++) {
+          if (nd === (d + 2) % 4) continue;
+          const nc = c + DX[nd], nr = r + DY[nd];
+          if (nc < 0 || nr < 0 || nc >= cols || nr >= rows) continue;
+          const ncell = nr * cols + nc;
+          const goal = nc === g.c && nr === g.r;
+          if (blocked[ncell] && !goal) continue;
+          let next = cost[v] + 1 + (nd !== d ? BEND : 0) + crowd[ncell] * CROWD;
+          if (goal && nd !== gd) next += BEND;
+          const nv = ncell * 4 + nd;
+          if (next < cost[nv]) { cost[nv] = next; prev[nv] = v; push(next + h(nc, nr), nv); }
+        }
+      }
+      if (found < 0) return null;
+      const cells = [];
+      for (let v = found; v >= 0; v = prev[v]) cells.push(v >> 2);
+      return cells.reverse();
+    }
+    return ends.map(([A,B]) => {
+      const tipA = { x:A.x, y:A.dir < 0 ? A.top - 1 : A.bottom + 1 };
+      const tipB = { x:B.x, y:B.dir < 0 ? B.top - 1 : B.bottom + 1 };
+      const s = startCell(A), g = startCell(B);
+      const cells = search(s, A.dir < 0 ? 0 : 2, g, B.dir < 0 ? 2 : 0);
+      if (!cells) return { points:[tipA, tipB], dirs:[A.dir, B.dir] };
+      for (const cell of cells) crowd[cell] = Math.min(255, crowd[cell] + 1);
+      let pts = cells.map(cell => ({ x:(cell % cols) * G + G / 2, y:Math.floor(cell / cols) * G + G / 2 }));
+      // ปรับจุดแรก/สุดท้ายให้ตรงแนวขั้วพอดี
+      const align = (list, x) => {
+        const ox = list[0].x;
+        list[0] = { x, y:list[0].y };
+        if (list.length > 1 && list[1].x === ox && list[1].y !== list[0].y) {
+          for (let i = 1; i < list.length && list[i].x === ox; i++) list[i] = { x, y:list[i].y };
+        }
+      };
+      align(pts, tipA.x);
+      pts.reverse(); align(pts, tipB.x); pts.reverse();
+      pts = [tipA, ...pts, tipB].filter((p,i,list) => i === 0 || p.x !== list[i-1].x || p.y !== list[i-1].y);
+      const corners = pts.filter((p,i) => {
+        if (i === 0 || i === pts.length - 1) return true;
+        const a = pts[i-1], b = pts[i+1];
+        return !((a.x === p.x && p.x === b.x) || (a.y === p.y && p.y === b.y));
+      });
+      return { points:corners, dirs:[A.dir, B.dir] };
+    });
+  }
+  function tracePath(ctx, pts, radius) {
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = pts[i-1], b = pts[i], c = pts[i+1];
+      const r = Math.min(radius, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2);
+      ctx.arcTo(b.x, b.y, c.x, c.y, r);
+    }
+    const last = pts[pts.length - 1];
+    ctx.lineTo(last.x, last.y);
+  }
+  const pathLength = pts => pts.slice(1).reduce((sum,p,i) => sum + Math.hypot(p.x - pts[i].x, p.y - pts[i].y), 0);
+  function pointAt(pts, fraction) {
+    let left = pathLength(pts) * fraction;
+    for (let i = 1; i < pts.length; i++) {
+      const len = Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+      if (left <= len) {
+        const t = len ? left / len : 0;
+        return { x:pts[i-1].x + (pts[i].x - pts[i-1].x) * t, y:pts[i-1].y + (pts[i].y - pts[i-1].y) * t };
+      }
+      left -= len;
+    }
+    return pts[pts.length - 1];
+  }
+  function midpoint(pts) {
+    const lengths = pts.slice(1).map((p,i) => Math.hypot(p.x - pts[i].x, p.y - pts[i].y));
+    let half = lengths.reduce((sum,len) => sum + len, 0) / 2;
+    for (let i = 0; i < lengths.length; i++) {
+      if (half <= lengths[i]) {
+        const t = lengths[i] ? half / lengths[i] : 0;
+        return { x:pts[i].x + (pts[i+1].x - pts[i].x) * t, y:pts[i].y + (pts[i+1].y - pts[i].y) * t };
+      }
+      half -= lengths[i];
+    }
+    return pts[0];
+  }
+
+  function hitWire(x, y) {
+    let best = null, bestDistance = 8;
+    for (const {wire, points} of geometry) {
+      for (let k = 1; k < points.length; k++) {
+        const p = points[k - 1], q = points[k];
+        const dx = q.x - p.x, dy = q.y - p.y;
+        const t = Math.max(0, Math.min(1, ((x - p.x) * dx + (y - p.y) * dy) / (dx * dx + dy * dy || 1)));
+        const distance = Math.hypot(x - p.x - t * dx, y - p.y - t * dy);
+        if (distance < bestDistance) { bestDistance = distance; best = wire; }
+      }
+    }
+    return best;
+  }
+  function removePicked() {
+    if (state.power) return update("ตัดไฟก่อนลบสาย");
+    state.wires = state.wires.filter(wire => wire !== state.picked);
+    state.picked = null;
+    if (mode && mode.type === "exercise") mode.msg = null;
+    update();
+  }
+
+  function stopPlay() {
+    clearTimeout(playTimer);
+    if (mode) mode.playing = false;
+  }
+  // เริ่มโหมดใหม่: ล้างแผง แล้วใส่สาย/โปรแกรมตั้งต้น (ถ้ามี)
+  function restart(newMode, setup = {}) {
+    stopPlay();
+    Object.assign(state, { wires:setup.wires ? pairs(setup.wires) : [], selected:null, picked:null, power:false,
+      start:false, stop:false, run:false, coils:[false,false], mem:{} });
+    if (kind === "plc") state.program = clone(setup.program || DEFAULT_LADDER);
+    ladSel = null;
+    anim = null;
+    mode = newMode;
+    select.value = newMode && newMode.index != null ? String(newMode.index) : "";
+  }
+  const setupFor = ex => ex.ladder ? { wires:ex.wires, program:[] } : { program:ex.program };
+  const buttonReady = step => ({ power:state.power, startDown:state.start, startUp:!state.start,
+    stopDown:state.stop, stopUp:!state.stop })[step.act];
+  function stepDone(step, result) {
+    if (step.info) return Boolean(mode.seen && mode.seen.has(step));
+    if (step.wire) return hasWire(step.wire);
+    if (step.ladder) return programKey(state.program) === programKey(step.ladder);
+    return buttonReady(step) && !mismatch(step.expect || {}, result);
+  }
+  function hintWire() {
+    if (!mode || mode.type !== "tour" || anim) return null;
+    const step = mode.steps[mode.i];
+    return step && step.wire && !hasWire(step.wire) ? step.wire : null;
+  }
+
+  function renderGuide(sim) {
+    panel.querySelectorAll(".hint").forEach(el => el.classList.remove("hint"));
+    guide.hidden = !mode;
+    if (!mode) return;
+    let head, count, pct, text, result = "", buttons;
+    if (mode.type === "tour") {
+      const steps = mode.steps;
+      // ถ้าผู้ใช้ลบสาย/แก้ Ladder/ปิดไฟ ให้ย้อนกลับไปขั้นที่ยังไม่ครบ
+      const missing = steps.findIndex(step => step.wire && !hasWire(step.wire));
+      if (missing !== -1 && missing < mode.i) mode.i = missing;
+      const lastLadder = steps.map(step => Boolean(step.ladder)).lastIndexOf(true);
+      if (lastLadder !== -1 && mode.i > lastLadder && !stepDone(steps[lastLadder], sim)) mode.i = lastLadder;
+      const powerAt = steps.findIndex(step => step.act === "power");
+      if (!state.power && mode.i > powerAt) mode.i = powerAt;
+      while (mode.i < steps.length && stepDone(steps[mode.i], sim)) mode.i++;
+      const step = steps[mode.i];
+      head = mode.title ? "เรียนทีละขั้น: " + mode.title : "ตัวอย่างทีละขั้นตอน";
+      count = step ? "ขั้นที่ " + (mode.i + 1) + "/" + steps.length : "ครบ " + steps.length + " ขั้น";
+      pct = mode.i / steps.length * 100;
+      if (step) {
+        text = step.info ? (step.focus === "ladder" ? "อ่าน Ladder: " : "") + step.info
+          : step.wire
+          ? "ต่อสาย <b>" + pinName(step.wire[0]) + "</b> ↔ <b>" + pinName(step.wire[1]) + "</b>" +
+            ' <span class="how">(คลิกขั้วที่กะพริบทั้งสองจุด)</span><br>' + step.text
+          : step.ladder ? "เขียน Ladder: " + step.text : "ทดสอบ: " + step.text;
+        if (step.act && buttonReady(step)) {
+          const wrong = mismatch(step.expect || {}, sim);
+          if (wrong) result = '<p class="guide-result bad">ยังไม่ตรง — ' + wrong + ' ตรวจสายหรือ Ladder อีกครั้ง</p>';
+        }
+        buttons = [["auto",step.info ? "ถัดไป →" : "ทำขั้นนี้ให้ดู",true],["play",mode.playing ? "⏸ หยุดสาธิต" : "▶ สาธิตอัตโนมัติ"]];
+        if (mode.index != null) buttons.push(["back","กลับไปแบบฝึก"]);
+        buttons.push(["exit","ออก"]);
+        const targets = step.info
+          ? (step.focus === "ladder" && ladder ? [ladder] : step.focus === "diagram" && schematic ? [schematic] : [])
+          : step.wire ? step.wire.map(id => terminals.get(id)) : step.ladder ? [ladder]
+          : [step.act === "power" ? power : panel.querySelector('[data-cap="' + (step.act.startsWith("start") ? "S" : "T") + '"]')];
+        targets.forEach(el => el.classList.add("hint"));
+      } else {
+        text = mode.index != null
+          ? "<b>เรียนครบทุกขั้นแล้ว!</b> วงจรทำงานตามโจทย์ กด <b>กลับไปแบบฝึก</b> แล้วลอง <b>ตรวจคำตอบ</b> หรือล้างสายแล้วลองทำเองอีกครั้ง"
+          : "<b>เสร็จแล้ว!</b> วงจร" + (kind === "plc" ? " PLC " : "รีเลย์") +
+            "ทำงานแบบค้างสถานะครบทุกขั้น ลองกด Start/Stop ซ้ำได้ หรือเลือก <b>แบบฝึก</b> เพื่อลองทำเอง";
+        buttons = mode.index != null ? [["back","กลับไปแบบฝึก",true],["exit","ออก"]] : [["exit","ปิดคำแนะนำ",true]];
+      }
+    } else {
+      const ex = list[mode.index];
+      head = "แบบฝึก " + (mode.index + 1) + "/" + list.length + " · " + ex.title;
+      count = solved.has(mode.index) ? "✓ ผ่านแล้ว" : "ผ่าน " + solved.size + "/" + list.length;
+      pct = solved.size / list.length * 100;
+      text = ex.goal;
+      if (mode.msg) result = '<p class="guide-result ' + mode.msg.kind + '">' + mode.msg.text + '</p>';
+      text += '<br><span class="how">กด <b>เรียนทีละขั้น</b> ให้ระบบแนะนำการต่อทีละเส้น หรือลองต่อเองแล้วกด <b>ตรวจคำตอบ</b></span>';
+      buttons = [["demo","เรียนทีละขั้น",true],["check","ตรวจคำตอบ"],["solution","ดูเฉลย"]];
+      if (mode.index < list.length - 1) buttons.push(["next","ข้อถัดไป"]);
+      buttons.push(["exit","ออก"]);
+    }
+    guide.innerHTML = '<div class="guide-head"><b>' + head + '</b><span class="guide-count">' + count + '</span></div>' +
+      '<div class="progress"><span style="width:' + pct + '%"></span></div><p class="guide-text">' + text + '</p>' + result +
+      '<div class="guide-actions">' + buttons.map(([id,label,primary]) =>
+        '<button type="button" class="action' + (primary ? " primary" : "") + '" data-guide="' + id + '">' + label + '</button>').join("") +
+      '</div>';
+  }
+
+  // ---------- Ladder editor ----------
+  const contactSvg = type => '<svg viewBox="0 0 58 18" aria-hidden="true"><path d="M0 9H22M36 9H58M22 1V17M36 1V17"/>' +
+    (type === "NC" ? '<path d="M19 16L39 2"/>' : '') + '</svg>';
+  const options = (items, value) => items.map(item => '<option' + (item === value ? ' selected' : '') + '>' + item + '</option>').join("");
+  const selectedContact = () => ladSel && state.program[ladSel[0]]?.blocks[ladSel[1]]?.[ladSel[2]];
+  function renderLadder(sim) {
+    if (!ladder) return;
+    const bit = addr => Boolean(sim.signals[addr]);
+    const closed = ct => state.power && (ct.type === "NO" ? bit(ct.addr) : !bit(ct.addr));
+    // คำอธิบาย Ladder ของแบบฝึก/ตัวอย่างที่กำลังเปิดอยู่
+    const ex = mode && mode.index != null ? list[mode.index] : null;
+    const noteText = ex ? ex.ladderText : mode && mode.type === "tour"
+      ? "<b>Rung 1: [X1]─[X0 ‖ Y0]─(Y0)</b> ค้างสถานะ · <b>Rung 2: [/Y0]─(Y1)</b> · Rung 3–4: X2→Y2, X3→Y3" : "";
+    const note = ladder.querySelector(".ladder-note");
+    note.hidden = !noteText;
+    note.innerHTML = noteText || "";
+    // ขณะต่อสายเข้า X/Y ให้ชี้หน้าสัมผัส/คอยล์ที่ใช้แอดเดรสนั้นใน Ladder
+    const step = mode && mode.type === "tour" ? mode.steps[mode.i] : null;
+    const focus = new Set(step && step.wire ? step.wire.filter(id => /^[XY]\d$/.test(id)) : []);
+    const body = ladder.querySelector(".ladder-body");
+    body.innerHTML = state.program.map((r, ri) =>
+      '<div class="rung"><span class="rung-no">' + (ri + 1) + '</span><div class="rung-line">' +
+      r.blocks.map((block, bi) => '<div class="block' + (block.length > 1 ? ' parallel' : '') + '">' +
+        block.map((ct, ci) => {
+          const sel = ladSel && ladSel[0] === ri && ladSel[1] === bi && ladSel[2] === ci;
+          return '<button type="button" class="contact' + (closed(ct) ? ' on' : '') + (sel ? ' sel' : '') +
+            (focus.has(ct.addr) ? ' focus' : '') +
+            '" data-ct="' + ri + ',' + bi + ',' + ci + '" aria-label="หน้าสัมผัส ' + ct.type + ' ' + ct.addr + '">' +
+            '<small>' + ct.addr + '</small>' + contactSvg(ct.type) + '</button>';
+        }).join("") + '</div>').join("") +
+      '<button type="button" class="lad-add" data-lad="series" data-r="' + ri + '" title="เพิ่มหน้าสัมผัสอนุกรม">+</button>' +
+      '<span class="fill"></span><label class="coil' + (state.power && bit(r.coil) ? ' on' : '') +
+        (focus.has(r.coil) ? ' focus' : '') + '">(' +
+      '<select data-coil="' + ri + '" aria-label="คอยล์ Rung ' + (ri + 1) + '">' + options(coilAddrs, r.coil) + '</select>)</label></div>' +
+      '<button type="button" class="lad-del" data-lad="delrung" data-r="' + ri + '" title="ลบ Rung">×</button></div>'
+    ).join("") || '<p class="lad-empty">ยังไม่มี Rung — กด <b>+ เพิ่ม Rung</b></p>';
+    const ct = selectedContact();
+    if (!ct) ladSel = null;
+    ladder.querySelector(".ladder-edit").innerHTML = ct
+      ? '<span>หน้าสัมผัสที่เลือก</span><select class="action" data-edit="addr" aria-label="แอดเดรส">' + options(contactAddrs, ct.addr) + '</select>' +
+        '<button type="button" class="action" data-lad="type">' + (ct.type === "NO" ? "NO ┤ ├ → เปลี่ยนเป็น NC" : "NC ┤/├ → เปลี่ยนเป็น NO") + '</button>' +
+        '<button type="button" class="action" data-lad="parallel">+ ขนาน</button>' +
+        '<button type="button" class="action" data-lad="delct">ลบหน้าสัมผัส</button>'
+      : '<span>คลิกหน้าสัมผัสเพื่อแก้แอดเดรส/ชนิด · ปุ่ม <b>+</b> ท้าย Rung เพิ่มหน้าสัมผัสอนุกรม · เลือกคอยล์ที่ ( )</span>';
+  }
+  // ---------- วงจรไฟฟ้า (แผง Relay) ----------
+  const loadSvg = el => el.t === "coil"
+    ? '<svg viewBox="0 0 58 18" aria-hidden="true"><path d="M0 9H17M41 9H58"/><rect x="17" y="2" width="24" height="14" rx="1"/></svg>'
+    : '<svg viewBox="0 0 58 18" aria-hidden="true"><path d="M0 9H21M37 9H58M23.3 3.3L34.7 14.7M34.7 3.3L23.3 14.7"/><circle cx="29" cy="9" r="8"/></svg>';
+  function renderSchematic(sim) {
+    if (!schematic) return;
+    const ex = mode && mode.index != null ? list[mode.index] : null;
+    const circuit = ex ? ex.circuit : mode && mode.type === "tour" ? relayTourCircuit : null;
+    const note = schematic.querySelector(".ladder-note");
+    note.hidden = false;
+    note.innerHTML = circuit
+      ? "วงจรของ <b>" + (ex ? ex.title : "ตัวอย่างค้างสถานะ") + "</b> — ต่อสายบนแผงให้ได้ตามวงจรนี้"
+      : "เลือก <b>แบบฝึก</b> หรือกด <b>ตัวอย่างทีละขั้น</b> เพื่อดูวงจรไฟฟ้าของข้อนั้น";
+    const step = mode && mode.type === "tour" ? mode.steps[mode.i] : null;
+    const focusPins = new Set(step && step.wire ? step.wire : []);
+    const part = el => {
+      const info = circuitPart(el, state, sim);
+      const cls = (state.power && info.on ? " on" : "") + (info.pins.some(id => focusPins.has(id)) ? " focus" : "");
+      const svg = el.t === "coil" || el.t === "lamp" ? loadSvg(el) : contactSvg(info.type);
+      return '<span class="' + (el.t === "coil" || el.t === "lamp" ? "load" : "contact") + cls + '" title="' +
+        info.pins.map(pinName).join(" ↔ ") + '"><small>' + info.name + '</small>' + svg + '<em>' + info.sub + '</em></span>';
+    };
+    schematic.querySelector(".ladder-body").innerHTML = circuit ? circuit.map((ln, li) =>
+      '<div class="rung"><span class="rung-no">' + (li + 1) + '</span><div class="rung-line">' +
+      ln.blocks.map(block => '<div class="block' + (block.length > 1 ? ' parallel' : '') + '">' + block.map(part).join("") + '</div>').join("") +
+      '<span class="fill"></span>' + part(ln.load) + '</div></div>').join("") : "";
+    schematic.querySelector(".rails").hidden = !circuit;
+  }
+
+  function editLadder(action, target) {
+    const program = state.program;
+    const r = target && target.dataset.r != null ? Number(target.dataset.r) : null;
+    const ct = selectedContact();
+    if (action === "addrung") { program.push(rung([[c("X0")]], "Y0")); ladSel = [program.length - 1, 0, 0]; }
+    if (action === "default") { state.program = clone(DEFAULT_LADDER); ladSel = null; }
+    if (action === "clear") { state.program = []; ladSel = null; }
+    if (action === "series") { program[r].blocks.push([c("X0")]); ladSel = [r, program[r].blocks.length - 1, 0]; }
+    if (action === "delrung") { program.splice(r, 1); ladSel = null; }
+    if (action === "type" && ct) ct.type = ct.type === "NO" ? "NC" : "NO";
+    if (action === "parallel" && ct) {
+      program[ladSel[0]].blocks[ladSel[1]].splice(ladSel[2] + 1, 0, c("X0"));
+      ladSel = [ladSel[0], ladSel[1], ladSel[2] + 1];
+    }
+    if (action === "delct" && ct) {
+      const blocks = program[ladSel[0]].blocks;
+      blocks[ladSel[1]].splice(ladSel[2], 1);
+      if (!blocks[ladSel[1]].length) blocks.splice(ladSel[1], 1);
+      ladSel = null;
+    }
+    if (mode && mode.type === "exercise") mode.msg = null;
+    update();
+  }
+
+  function draw() {
+    const rect = board.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(ratio,ratio);
+    ctx.lineJoin = "round";
+    const items = state.wires.map(wire => ({ wire, hint:false }));
+    const hint = hintWire();
+    if (hint) items.push({ wire:hint, hint:true });
+    const key = Math.round(rect.width) + "x" + Math.round(rect.height) + "|" + JSON.stringify(items.map(item => item.wire));
+    if (routeCache.key !== key) routeCache = { key, routes:routeWires(items.map(item => item.wire), rect) };
+    const lead = 7;
+    geometry = [];
+    items.forEach(({wire, hint}, index) => {
+      const route = routeCache.routes[index];
+      const points = route.points;
+      const pa = points[0], pb = points[points.length - 1];
+      const a = { side:route.dirs[0] }, b = { side:route.dirs[1] };
+      const path = () => {
+        ctx.beginPath();
+        tracePath(ctx, points, 8);
+      };
+      ctx.lineCap = "round";
+      if (hint) {
+        path();
+        ctx.setLineDash([6,5]);
+        ctx.strokeStyle = "#ffcb7a";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        return;
+      }
+      geometry.push({ wire, mid:midpoint(points), points });
+      const color = colors[index % colors.length];
+      if (wire === state.picked || wire === hovered) {
+        path();
+        ctx.strokeStyle = wire === state.picked ? "rgba(255,95,85,.7)" : "rgba(255,255,255,.35)";
+        ctx.lineWidth = 13;
+        ctx.stroke();
+      }
+      // แอนิเมชันสาธิต: สายค่อยๆ ยืดจากขั้วแรกไปขั้วที่สอง
+      let progress = 1;
+      if (anim && wire === anim.wire) {
+        const t = Math.min(1, (performance.now() - anim.t0) / ANIM_MS);
+        progress = 1 - Math.pow(1 - t, 3);
+        const total = pathLength(points);
+        ctx.setLineDash([total * progress, total + 20]);
+      }
+      path(); ctx.strokeStyle = "#0c1216"; ctx.lineWidth = 7; ctx.stroke();
+      path(); ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.stroke();
+      path(); ctx.strokeStyle = "rgba(255,255,255,.28)"; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.setLineDash([]);
+      if (progress < 1) {
+        const head = pointAt(points, progress);
+        ctx.beginPath(); ctx.arc(head.x, head.y, 9, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,203,122,.35)"; ctx.fill();
+        ctx.beginPath(); ctx.arc(head.x, head.y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff4e0"; ctx.fill();
+      }
+      // หางปลา (ferrule) โลหะเสียบเข้าขั้ว + ปลอกสีเดียวกับสาย
+      for (const [p,end] of progress < 1 ? [[pa,a]] : [[pa,a],[pb,b]]) {
+        ctx.lineCap = "butt";
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x,p.y + end.side * lead);
+        ctx.strokeStyle = "#0c1216"; ctx.lineWidth = 4.5; ctx.stroke();
+        ctx.strokeStyle = "#d3dade"; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p.x,p.y + end.side * (lead - 1)); ctx.lineTo(p.x,p.y + end.side * (lead + 3));
+        ctx.strokeStyle = "#0c1216"; ctx.lineWidth = 7.5; ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = 5.5; ctx.stroke();
+      }
+    });
+    const picked = geometry.find(item => item.wire === state.picked);
+    delButton.hidden = !picked;
+    if (picked) {
+      delButton.style.left = picked.mid.x + "px";
+      delButton.style.top = picked.mid.y + "px";
+    }
+  }
+
+  function update(message) {
+    if (state.picked && !state.wires.includes(state.picked)) state.picked = null;
+    const result = simulate(state,kind);
+    state.run = result.run;
+    state.coils = result.coils;
+    state.mem = result.mem || {};
+    if (result.fault) state.power = false;
+    power.setAttribute("aria-checked",String(state.power));
+    for (const [id,el] of terminals) {
+      el.classList.toggle("selected",state.selected === id);
+      el.classList.toggle("connected",state.wires.some(wire => wire.includes(id)));
+      el.setAttribute("aria-pressed",String(state.selected === id));
+    }
+    panel.querySelectorAll("[data-led]").forEach(el => {
+      el.classList.toggle("active",Boolean(el.dataset.led === "power" ? state.power : result.signals[el.dataset.led]));
+    });
+    panel.querySelector('[data-lamp="G"]').classList.toggle("on",Boolean(result.green));
+    panel.querySelector('[data-lamp="R"]').classList.toggle("on",Boolean(result.red));
+    renderGuide(result);
+    renderLadder(result);
+    renderSchematic(result);
+    const label = state.selected && pinName(state.selected);
+    status.textContent = result.fault || message ||
+      (state.picked ? "เลือกสาย " + pinName(state.picked[0]) + " ↔ " + pinName(state.picked[1]) +
+        " · กดปุ่ม × บนสาย หรือปุ่ม Delete เพื่อลบ" :
+      label ?"เลือกขั้วคู่กับ " + label : state.power ?
+        (result.run ? "จ่ายไฟ · วงจรทำงาน" : "จ่ายไฟ · วงจรหยุด") :
+        "ปิดไฟ · " + state.wires.length + " สาย");
+    draw();
+  }
+
+  function startAnim(wire) {
+    anim = { wire, t0:performance.now() };
+    const tick = () => {
+      if (!anim || anim.wire !== wire) return;
+      if (performance.now() - anim.t0 >= ANIM_MS) { anim = null; return update(); }
+      draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  // ทำขั้นปัจจุบันของการสาธิตให้ (ต่อสายพร้อมแอนิเมชัน / ใส่ Ladder / กดปุ่ม)
+  function doStep() {
+    const step = mode.steps[mode.i];
+    if (!step) return false;
+    if (step.info) {
+      mode.seen = mode.seen || new Set();
+      mode.seen.add(step);
+    } else if (step.wire) {
+      if (state.power) { update("ตัดไฟก่อนต่อสาย"); return false; }
+      const wire = step.wire.slice();
+      state.wires.push(wire);
+      state.selected = null;
+      startAnim(wire);
+    } else if (step.ladder) {
+      state.program = clone(step.ladder);
+      ladSel = null;
+    } else if (step.act === "power") state.power = true;
+    else if (step.act === "startDown") state.start = true;
+    else if (step.act === "startUp") state.start = false;
+    else if (step.act === "stopDown") state.stop = true;
+    else state.stop = false;
+    update();
+    return true;
+  }
+  function playNext() {
+    if (!mode || mode.type !== "tour" || !mode.playing) return;
+    const before = mode.i, step = mode.steps[before];
+    if (!step) { mode.playing = false; return update(); }
+    if (!doStep() || mode.i === before) {
+      mode.playing = false;
+      return update("หยุดสาธิต — ขั้นนี้ยังไม่ผ่าน ตรวจสายหรือ Ladder");
+    }
+    playTimer = setTimeout(playNext, step.wire ? ANIM_MS + 900 : step.info ? 3000 : step.ladder ? 2000 : 1600);
+  }
+
+  function guideAction(action) {
+    if (action === "exit") { stopPlay(); mode = null; select.value = ""; return update(); }
+    if (action === "next") {
+      const index = mode.index + 1;
+      restart({ type:"exercise", index, msg:null }, setupFor(list[index]));
+      return update();
+    }
+    if (action === "demo") {
+      const ex = list[mode.index];
+      restart({ type:"tour", steps:exerciseSteps(ex), i:0, index:mode.index, title:ex.title, seen:new Set() }, setupFor(ex));
+      return update();
+    }
+    if (action === "back") {
+      stopPlay();
+      mode = { type:"exercise", index:mode.index, msg:null };
+      return update();
+    }
+    if (action === "auto") { stopPlay(); doStep(); return; }
+    if (action === "play") {
+      if (mode.playing) { stopPlay(); return update(); }
+      mode.playing = true;
+      return playNext();
+    }
+    if (action === "check") {
+      const error = check(kind, list[mode.index], state.wires, state.program);
+      if (error) {
+        mode.msg = { kind:"bad", text:"ยังไม่ผ่าน — " + error };
+      } else {
+        solved.add(mode.index);
+        select.options[mode.index + 1].textContent = "✓ " + (mode.index + 1) + ". " + list[mode.index].title;
+        mode.msg = { kind:"ok", text:"ผ่าน! วงจรทำงานตามโจทย์ ลองเลื่อนสวิตช์ ON แล้วกดปุ่มดูของจริงได้เลย" };
+      }
+      return update();
+    }
+    if (action === "solution") {
+      const ex = list[mode.index];
+      if (ex.ladder) {
+        state.program = clone(ex.solutionProgram);
+        ladSel = null;
+        mode.msg = { kind:"info", text:"ใส่ Ladder เฉลยแล้ว ดูโปรแกรมด้านล่าง แล้วเลื่อนสวิตช์ ON เพื่อทดสอบ" };
+        return update();
+      }
+      if (state.power) return update("ตัดไฟก่อนใส่เฉลย");
+      state.wires = pairs(ex.solution);
+      state.selected = null;
+      mode.msg = { kind:"info", text:"ใส่สายเฉลยแล้ว ไล่ดูทีละเส้น แล้วเลื่อนสวิตช์ ON เพื่อทดสอบ" };
+      return update();
+    }
+  }
+
+  panel.addEventListener("click",event => {
+    const guideButton = event.target.closest("[data-guide]");
+    if (guideButton) { guideAction(guideButton.dataset.guide); return; }
+    const terminal = event.target.closest("[data-pin]");
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    if (!terminal && !action) {
+      // คลิกบนแผง (ไม่ใช่ปุ่ม) → เลือกสายที่อยู่ใกล้จุดคลิก
+      if (!board.contains(event.target) || event.target.closest("button")) return;
+      const rect = board.getBoundingClientRect();
+      const hit = hitWire(event.clientX - rect.left, event.clientY - rect.top);
+      if (hit || state.picked) {
+        state.picked = hit;
+        if (hit) state.selected = null;
+        update();
+      }
+      return;
+    }
+    if (action === "delwire") return removePicked();
+    state.picked = null;
+    if (state.power && action !== "power" && action !== "example") {
+      update("ตัดไฟก่อนแก้สาย");
+      return;
+    }
+    let message;
+    if (terminal) {
+      const id = terminal.dataset.pin;
+      if (state.selected && state.selected !== id) {
+        if (!hasWire([state.selected,id])) {
+          state.wires.push([state.selected,id]);
+          if (mode && mode.type === "exercise") mode.msg = null;
+          if (mode && mode.type === "tour" && !mode.steps.some(step => step.wire && sameWire(step.wire,state.selected,id))) {
+            message = "สายนี้ไม่อยู่ในวงจรตัวอย่าง — กด ย้อนสาย เพื่อเอาออก";
+          }
+        }
+        state.selected = null;
+      } else {
+        state.selected = state.selected ? null : id;
+      }
+    }
+    if (action) state.selected = null;
+    if (action === "power") state.power = !state.power;
+    if (action === "example") restart({ type:"tour", steps:tourSteps(kind), i:0 });
+    if (action === "power" && mode && mode.playing && !state.power) stopPlay();
+    if (action === "undo") state.wires.pop();
+    if (action === "reset") state.wires = [];
+    if ((action === "undo" || action === "reset") && mode && mode.type === "exercise") mode.msg = null;
+    update(message);
+  });
+  board.addEventListener("pointermove",event => {
+    const rect = board.getBoundingClientRect();
+    const hit = event.target.closest("button") ? null : hitWire(event.clientX - rect.left, event.clientY - rect.top);
+    board.style.cursor = hit ? "pointer" : "";
+    if (hit !== hovered) { hovered = hit; draw(); }
+  });
+  board.addEventListener("pointerleave",() => {
+    if (hovered) { hovered = null; draw(); }
+  });
+  document.addEventListener("keydown",event => {
+    if (!state.picked || event.target.closest?.("select,input,textarea")) return;
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      removePicked();
+    } else if (event.key === "Escape") {
+      state.picked = null;
+      update();
+    }
+  });
+  select.addEventListener("change",() => {
+    if (select.value === "") { stopPlay(); mode = null; }
+    else {
+      const index = Number(select.value);
+      restart({ type:"exercise", index, msg:null }, setupFor(list[index]));
+    }
+    update();
+  });
+  if (ladder) {
+    ladder.addEventListener("click",event => {
+      const contactEl = event.target.closest("[data-ct]");
+      if (contactEl) {
+        const next = contactEl.dataset.ct.split(",").map(Number);
+        ladSel = ladSel && ladSel.join() === next.join() ? null : next;
+        return update();
+      }
+      const button = event.target.closest("[data-lad]");
+      if (button) editLadder(button.dataset.lad, button);
+    });
+    ladder.addEventListener("change",event => {
+      if (event.target.dataset.coil != null) {
+        state.program[Number(event.target.dataset.coil)].coil = event.target.value;
+      } else if (event.target.dataset.edit === "addr") {
+        const ct = selectedContact();
+        if (ct) ct.addr = event.target.value;
+      } else return;
+      if (mode && mode.type === "exercise") mode.msg = null;
+      update();
+    });
+  }
+  for (const cap of panel.querySelectorAll("[data-cap]")) {
+    const key = cap.dataset.cap === "S" ? "start" : "stop";
+    function press(value) {
+      state[key] = value;
+      update();
+    }
+    cap.addEventListener("pointerdown",event => {
+      if (event.button !== 0) return;
+      cap.setPointerCapture(event.pointerId);
+      press(true);
+    });
+    for (const event of ["pointerup","pointercancel","lostpointercapture","blur"]) {
+      cap.addEventListener(event,() => { if (state[key]) press(false); });
+    }
+    cap.addEventListener("keydown",event => {
+      if (event.code !== "Space" && event.code !== "Enter") return;
+      event.preventDefault();
+      if (!event.repeat) press(true);
+    });
+    cap.addEventListener("keyup",event => {
+      if (event.code === "Space" || event.code === "Enter") press(false);
+    });
+    cap.addEventListener("click",event => {
+      if (event.detail === 0 && !state[key]) {
+        press(true);
+        press(false);
+      }
+    });
+  }
+  new ResizeObserver(draw).observe(board);
+  update();
+}
+mount("plc","PLC","Ladder ค้างสถานะ");
+mount("relay","Relay","หน้าสัมผัสช่วยค้างคอยล์");
+</script>
+</body>
+</html>
