@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>แผงฝึกต่อวงจรไฟฟ้า 3D</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#101925;color:#eef4fa;font:16px system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:36px clamp(14px,4vw,56px)}h1{font-size:clamp(26px,4vw,44px);margin:0 0 7px}p{margin:0;color:#bdcddd}header{border-bottom:1px solid #334357;padding-bottom:22px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;margin-top:22px}.stage,aside{border:1px solid #35465a;border-radius:18px;background:#172435}.stage{position:relative;overflow:hidden;min-height:330px;background-color:#142132;background-image:radial-gradient(#38495c 1px,transparent 1px);background-size:19px 19px;aspect-ratio:1.05;touch-action:none}.scene{position:absolute;left:50%;top:50%;width:720px;height:660px;transform:translate(-50%,-50%) scale(var(--scale,1));perspective:1250px;pointer-events:none}.board{position:absolute;inset:0;transform:rotateX(var(--tilt,24deg)) rotateZ(var(--turn,-8deg));transform-style:preserve-3d;border-radius:21px;background:#dbe5e7;border:2px solid #edf4f5;color:#172939;box-shadow:0 12px 0 #718b99,0 15px 0 #4b6575,0 30px 45px #080e17;pointer-events:auto}
+*{box-sizing:border-box}body{margin:0;background:#101925;color:#eef4fa;font:16px system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:36px clamp(14px,4vw,56px)}h1{font-size:clamp(26px,4vw,44px);margin:0 0 7px}p{margin:0;color:#bdcddd}header{border-bottom:1px solid #334357;padding-bottom:22px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;margin-top:22px}.stage,aside{border:1px solid #35465a;border-radius:18px;background:#172435}.stage{position:relative;overflow:hidden;min-height:330px;background-color:#142132;background-image:radial-gradient(#38495c 1px,transparent 1px);background-size:19px 19px;aspect-ratio:1.05}.scene{position:absolute;left:50%;top:50%;width:720px;height:660px;transform:translate(-50%,-50%) scale(var(--scale,1));perspective:1250px;pointer-events:none}.board{position:absolute;inset:0;user-select:none;-webkit-user-select:none;transform-style:preserve-3d;border-radius:21px;background:#dbe5e7;border:2px solid #edf4f5;color:#172939;box-shadow:0 12px 0 #718b99,0 15px 0 #4b6575,0 30px 45px #080e17;pointer-events:auto}
 .part{position:absolute;width:156px;height:132px;border-radius:12px;background:#f2f6f5;border:1px solid #a0b5bd;box-shadow:0 4px #8da5b1;display:grid;grid-template-rows:20px 50px 1fr;text-align:center;padding:7px;transform:translateZ(4px)}.name{font-size:14px;font-weight:750;line-height:20px;white-space:nowrap}.symbol{display:flex;align-items:center;justify-content:center;gap:9px}
 .schem{flex:none;width:46px;height:32px;padding:1px 2px;background:#fff;border:1px solid #c3d1d6;border-radius:6px;color:#1b2e3c}.schem svg{display:block;width:100%;height:100%}.schem text{fill:currentColor;stroke:none;font:bold 10px system-ui}.schem text.big{font-size:12px}
 .battery{position:relative;width:70px;height:24px;display:grid;place-items:center;border:3px solid #273642;border-radius:5px;background:linear-gradient(#9cb1bb,#455965 46%,#24343e 52%,#697c86);color:white;font:bold 12px monospace;opacity:.6}.battery.on{opacity:1;background:linear-gradient(#ffb960,#a85016 48%,#70300d 55%,#d47a2e)}.battery:after{content:'';position:absolute;right:-9px;top:3px;width:6px;height:12px;background:#697d88;border-radius:0 2px 2px 0}
@@ -27,7 +27,6 @@
 <span class="screw">⊕</span><span class="screw">⊕</span><span class="screw">⊕</span><span class="screw">⊕</span>
 <svg class="wires" viewBox="0 0 720 660" aria-label="สายไฟบนแผง"></svg>
 </div></div>
-<div class="stage-tools"><button id="top">มองจากด้านบน</button><button id="reset">มุม 3D</button></div>
 </section>
 <aside>
 <div><h2>ตัวอย่างการต่อ</h2><div class="buttons" id="presets">
@@ -35,7 +34,7 @@
 </div></div>
 <div><h2>จำนวนถ่านที่ใส่</h2><div class="buttons" id="cells"><button data-count="1">1 ก้อน</button><button data-count="2">2 ก้อน</button><button data-count="3">3 ก้อน</button></div><p id="voltage" class="reading"></p></div>
 <div><h2>ผลการวัด</h2><dl class="readout"><dt>โวลต์มิเตอร์</dt><dd id="vRead">—</dd><dt>แอมมิเตอร์</dt><dd id="aRead">—</dd></dl><div id="alerts" class="alerts" aria-live="polite"></div><button id="replace" hidden>เปลี่ยนหลอดที่ขาดทั้งหมด</button></div>
-<div><h2>ต่อสายบนแผง</h2><p>คลิกขั้วต้นทางแล้วคลิกขั้วปลายทาง คลิกที่สายไฟเพื่อลบสายเส้นนั้น คลิกรูปสวิตช์เพื่อเปิด/ปิด คลิกรูปหลอดไฟเพื่อทำให้ขาดหรือเปลี่ยนหลอดใหม่ ลากพื้นที่ว่างเพื่อหมุนแผง</p></div>
+<div><h2>ต่อสายบนแผง</h2><p>คลิกขั้วต้นทางแล้วคลิกขั้วปลายทาง คลิกที่สายไฟเพื่อลบสายเส้นนั้น คลิกรูปสวิตช์เพื่อเปิด/ปิด คลิกรูปหลอดไฟเพื่อทำให้ขาดหรือเปลี่ยนหลอดใหม่</p></div>
 <div><h2>สายบนแผง</h2><p id="status" class="status"></p><button id="undo">ลบสายล่าสุด</button></div>
 </aside>
 </div>
@@ -470,28 +469,10 @@ document.querySelector('#undo').onclick = () => {
  selected = null;
  update();
 };
-let tilt = 24, turn = -8, drag = null;
-function angle() {
- board.style.setProperty('--tilt',tilt+'deg');
- board.style.setProperty('--turn',turn+'deg');
-}
-document.querySelector('#top').onclick = () => { tilt = 0; turn = 0; angle(); };
-document.querySelector('#reset').onclick = () => { tilt = 24; turn = -8; angle(); };
-stage.onpointerdown = e => {
- if (e.button !== 0 || e.target.closest('button, .hit, .bulb')) return;
- drag = {x:e.clientX,y:e.clientY,tilt,turn};
- stage.setPointerCapture(e.pointerId);
-};
-stage.onpointermove = e => {
- if (!drag) return;
- tilt = Math.min(58,Math.max(-35,drag.tilt-(e.clientY-drag.y)*.23));
- turn = Math.min(27,Math.max(-27,drag.turn+(e.clientX-drag.x)*.22));
- angle();
-};
-stage.onpointerup = stage.onpointercancel = stage.onlostpointercapture = () => { drag = null; };
+// board is fixed in top view: only fit it to the stage size
 new ResizeObserver(([entry]) => {
  const {width,height} = entry.contentRect;
- scene.style.setProperty('--scale',Math.min((width-24)/840,(height-54)/735,1.12));
+ scene.style.setProperty('--scale',Math.min((width-28)/724,(height-44)/680,1.12));
 }).observe(stage);
 preset('series');
 </script>
