@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="th">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>แผงฝึกต่อวงจรไฟฟ้า 3D</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101925;color:#eef4fa;font:16px system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:36px clamp(14px,4vw,56px)}h1{font-size:clamp(26px,4vw,44px);margin:0 0 7px}p{margin:0;color:#bdcddd}header{border-bottom:1px solid #334357;padding-bottom:22px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;margin-top:22px}.stage,aside{border:1px solid #35465a;border-radius:18px;background:#172435}.stage{position:relative;overflow:hidden;min-height:330px;background-color:#142132;background-image:radial-gradient(#38495c 1px,transparent 1px);background-size:19px 19px;aspect-ratio:1.05;touch-action:none}.scene{position:absolute;left:50%;top:50%;width:720px;height:660px;transform:translate(-50%,-50%) scale(var(--scale,1));perspective:1250px;pointer-events:none}.board{position:absolute;inset:0;transform:rotateX(var(--tilt,24deg)) rotateZ(var(--turn,-8deg));transform-style:preserve-3d;border-radius:21px;background:#dbe5e7;border:2px solid #edf4f5;color:#172939;box-shadow:0 12px 0 #718b99,0 15px 0 #4b6575,0 30px 45px #080e17;pointer-events:auto}
+.part{position:absolute;width:156px;height:132px;border-radius:12px;background:#f2f6f5;border:1px solid #a0b5bd;box-shadow:0 4px #8da5b1;display:grid;grid-template-rows:20px 50px 1fr;text-align:center;padding:7px;transform:translateZ(4px)}.name{font-size:14px;font-weight:750;line-height:20px;white-space:nowrap}.symbol{display:flex;align-items:center;justify-content:center;gap:9px}
+.schem{flex:none;width:46px;height:32px;padding:1px 2px;background:#fff;border:1px solid #c3d1d6;border-radius:6px;color:#1b2e3c}.schem svg{display:block;width:100%;height:100%}.schem text{fill:currentColor;stroke:none;font:bold 10px system-ui}.schem text.big{font-size:12px}
+.battery{position:relative;width:70px;height:24px;display:grid;place-items:center;border:3px solid #273642;border-radius:5px;background:linear-gradient(#9cb1bb,#455965 46%,#24343e 52%,#697c86);color:white;font:bold 12px monospace;opacity:.6}.battery.on{opacity:1;background:linear-gradient(#ffb960,#a85016 48%,#70300d 55%,#d47a2e)}.battery:after{content:'';position:absolute;right:-9px;top:3px;width:6px;height:12px;background:#697d88;border-radius:0 2px 2px 0}
+.bulb{display:block;width:42px;height:46px}.bulb svg{display:block;width:100%;height:100%;overflow:visible;transition:filter .2s}.bulb .lit,.bulb .halo{transition:opacity .2s}.bulb .broken{display:none}.bulb.burnt .broken{display:inline}.bulb.burnt .fil{display:none}.bulb.burnt .glass{fill:#bfc5c8}.bulb{cursor:pointer;border-radius:6px}.bulb:focus-visible{outline:3px solid #007d95}.bulb.pop svg{animation:pop .8s ease-out}@keyframes pop{0%{filter:drop-shadow(0 0 22px #fff) drop-shadow(0 0 10px #ffe9a8) brightness(1.8)}35%{filter:drop-shadow(0 0 14px #ffb070) brightness(1.4)}100%{filter:none}}.name.burnt{color:#b3261e}
+#replace{margin-top:9px}
+.meter{width:80px;height:28px;display:grid;place-items:center;background:#253744;border:3px solid #526879;border-radius:5px;color:#acffe0;font:bold 13px monospace}.meter.warn{color:#ffb09a}
+.switch{padding:0;border:0;background:none;cursor:pointer;width:70px;height:40px;border-radius:6px}.switch svg{display:block;width:100%;height:100%;overflow:visible}.lever{transition:transform .25s;transform-origin:12px 25px}.switch[aria-pressed=false] .lever{transform:rotate(-32deg)}
+.junction{font-size:12px;font-weight:700;color:#355365}
+.ports{display:flex;justify-content:space-evenly;align-items:center}.port{border:0;background:none;color:#1a2935;display:grid;justify-items:center;gap:1px;font-weight:800;padding:3px 7px;cursor:pointer;min-width:40px}.port i{width:19px;height:19px;border:4px solid #455766;background:#182532;border-radius:50%;box-shadow:0 2px 1px #2637446b}.port.red i{border-color:#ce564b}.port.selected i{outline:3px solid #007d95;outline-offset:3px}.port:focus-visible,.switch:focus-visible{outline:3px solid #007d95}
+.wires{position:absolute;left:-2px;top:-2px;width:720px;height:660px;transform:translateZ(9px);pointer-events:none;overflow:visible}.wires path{fill:none;stroke-linecap:round;transition:stroke .12s}.wires .casing{stroke:#f1f6f5;stroke-width:6}.wires .line{stroke-width:3.5}.wires .hit{stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer;outline:none}.wire.hover .line,.wire:focus-within .line{stroke:#e5392b;stroke-dasharray:7 5}.wire.hover .casing,.wire:focus-within .casing{stroke:#ffd9d3;stroke-width:8}.stage-tools{position:absolute;bottom:12px;left:12px;display:flex;gap:7px}.stage-tools button,aside button{font:inherit;color:#eef4fa;border:1px solid #4a637a;border-radius:8px;background:#263a50;padding:7px 11px;cursor:pointer}.stage-tools button:hover,aside button:hover{background:#375571}aside{padding:17px;display:grid;gap:15px;align-content:start}aside h2{font-size:17px;margin:0 0 8px}.buttons{display:flex;gap:6px;flex-wrap:wrap}aside button[aria-pressed=true]{color:#102639;background:#94e2db;border-color:#94e2db}aside p{font-size:14px;line-height:1.55}.reading{font:bold 20px monospace;color:#a8f1e5;margin-top:6px}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0;font-size:14px;color:#bdcddd;align-items:baseline}.readout dd{margin:0;font:bold 19px monospace;color:#a8f1e5;text-align:right}.alerts{display:grid;gap:5px;margin-top:9px;font-size:13.5px;line-height:1.45;color:#bdcddd}.alerts .bad{color:#ffb09a}.alerts .ok{color:#a8f1e5}
+.note{margin-top:16px;font-size:14px;line-height:1.65}.status{min-height:24px}.screw{position:absolute;font-weight:bold;color:#738b97;font-size:18px}.screw:nth-child(1){left:8px;top:3px}.screw:nth-child(2){right:8px;top:3px}.screw:nth-child(3){left:8px;bottom:3px}.screw:nth-child(4){right:8px;bottom:3px}.row-label{position:absolute;left:24px;margin:0;color:#355365;font-size:14px;font-weight:800;line-height:18px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}aside{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:450px){.stage{min-height:290px}.stage-tools button{font-size:13px;padding:6px}aside{grid-template-columns:1fr}}
+</style>
+<main>
+<header><h1>แผงฝึกต่อวงจรไฟฟ้า 3D</h1><p>ฝึกต่อวงจรอนุกรม ขนาน และผสม ด้วยถ่าน AA 1.5 V</p></header>
+<div class="layout">
+<section class="stage" aria-label="แผงวงจรสามมิติ">
+<div class="scene"><div class="board">
+<span class="screw">⊕</span><span class="screw">⊕</span><span class="screw">⊕</span><span class="screw">⊕</span>
+<svg class="wires" viewBox="0 0 720 660" aria-label="สายไฟบนแผง"></svg>
+</div></div>
+<div class="stage-tools"><button id="top">มองจากด้านบน</button><button id="reset">มุม 3D</button></div>
+</section>
+<aside>
+<div><h2>ตัวอย่างการต่อ</h2><div class="buttons" id="presets">
+<button data-mode="series">อนุกรม</button><button data-mode="parallel">ขนาน</button><button data-mode="mixed">ผสม</button><button data-mode="battery">ถ่านอนุกรม</button><button data-mode="free">แผงเปล่า</button>
+</div></div>
+<div><h2>จำนวนถ่านที่ใส่</h2><div class="buttons" id="cells"><button data-count="1">1 ก้อน</button><button data-count="2">2 ก้อน</button><button data-count="3">3 ก้อน</button></div><p id="voltage" class="reading"></p></div>
+<div><h2>ผลการวัด</h2><dl class="readout"><dt>โวลต์มิเตอร์</dt><dd id="vRead">—</dd><dt>แอมมิเตอร์</dt><dd id="aRead">—</dd></dl><div id="alerts" class="alerts" aria-live="polite"></div><button id="replace" hidden>เปลี่ยนหลอดที่ขาดทั้งหมด</button></div>
+<div><h2>ต่อสายบนแผง</h2><p>คลิกขั้วต้นทางแล้วคลิกขั้วปลายทาง คลิกที่สายไฟเพื่อลบสายเส้นนั้น คลิกรูปสวิตช์เพื่อเปิด/ปิด คลิกรูปหลอดไฟเพื่อทำให้ขาดหรือเปลี่ยนหลอดใหม่ ลากพื้นที่ว่างเพื่อหมุนแผง</p></div>
+<div><h2>สายบนแผง</h2><p id="status" class="status"></p><button id="undo">ลบสายล่าสุด</button></div>
+</aside>
+</div>
+<p class="note">ค่าบนมิเตอร์คำนวณจากแบบจำลองวงจร: ถ่าน 1.5 V มีความต้านทานภายใน 0.1 Ω, หลอด 1.5 V มีความต้านทาน 5 Ω, แอมมิเตอร์ 0.05 Ω และโวลต์มิเตอร์ 10 MΩ ถ่านที่แสดงว่า "ว่าง" คือช่องที่ยังไม่ได้ใส่ถ่าน ก่อนต่อจริงให้ปิดสวิตช์ ต่อ V คร่อมจุดวัด และต่อ A แทรกในทางเดินกระแส ห้ามต่อหลอด 1.5 V ดวงเดียวคร่อม 3 V หรือ 4.5 V ในแบบจำลองนี้หลอดจะสว่างจ้าเมื่อได้แรงดันเกิน 1.95 V และขาดเมื่อเกิน 2.25 V หลอดที่ขาดจะไม่มีกระแสไหลผ่าน</p>
+</main>
+<script>
+const stage = document.querySelector('.stage');
+const scene = document.querySelector('.scene');
+const board = document.querySelector('.board');
+const wireLayer = document.querySelector('.wires');
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const parts = [
+ ['b1','ถ่าน AA 1','battery',['−','+']],
+ ['b2','ถ่าน AA 2','battery',['−','+']],
+ ['b3','ถ่าน AA 3','battery',['−','+']],
+ ['s1','สวิตช์ 1','switch',['1','2']],
+ ['s2','สวิตช์ 2','switch',['1','2']],
+ ['s3','สวิตช์ 3','switch',['1','2']],
+ ['l1','หลอด 1 · 1.5 V','bulb',['1','2']],
+ ['l2','หลอด 2 · 1.5 V','bulb',['1','2']],
+ ['l3','หลอด 3 · 1.5 V','bulb',['1','2']],
+ ['v','โวลต์มิเตอร์','meter',['COM','V']],
+ ['a','แอมมิเตอร์','meter',['COM','A']],
+ ['j1','จุดรวมสาย 1','junction',['1','2','3']],
+ ['j2','จุดรวมสาย 2','junction',['1','2','3']],
+ ['j3','จุดรวมสาย 3','junction',['1','2','3']],
+ ['j4','จุดรวมสาย 4','junction',['1','2','3']]
+];
+const svg = (box,body,extra='') => `<svg viewBox="${box}" aria-hidden="true" ${extra}>${body}</svg>`;
+const schemAttrs = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"';
+const meterSymbol = letter => `<path d="M0 15H11M33 15H44"/><circle cx="22" cy="15" r="11"/><text class="big" x="22" y="19.5" text-anchor="middle">${letter}</text>`;
+const SCHEM = {
+ battery: '<path d="M2 15H17M27 15H42"/><path d="M17 10V20" stroke-width="3.6"/><path d="M27 4V26"/><text x="5" y="10">−</text><text x="32" y="10">+</text>',
+ switch: '<path d="M0 20H7M37 20H44"/><circle cx="9" cy="20" r="2.2"/><circle cx="35" cy="20" r="2.2"/><path class="blade" d="M11 19L32 7"/>',
+ bulb: '<path d="M0 15H11M33 15H44"/><circle cx="22" cy="15" r="11"/><path d="M14.2 7.2L29.8 22.8M29.8 7.2L14.2 22.8"/>',
+ v: meterSymbol('V'),
+ a: meterSymbol('A'),
+ junction: '<path d="M2 15H42M22 15V28"/><circle cx="22" cy="15" r="3.4" fill="currentColor"/>'
+};
+const SCHEM_NAME = {battery:'เซลล์ไฟฟ้า',switch:'สวิตช์',bulb:'หลอดไฟ',v:'โวลต์มิเตอร์',a:'แอมมิเตอร์',junction:'จุดต่อสาย'};
+const SWITCH_ART = svg('0 0 70 40',
+ '<rect x="2" y="24" width="66" height="13" rx="4" fill="#e7dcc3" stroke="#9c8b68"/>' +
+ '<rect x="7" y="20" width="10" height="10" rx="2" fill="#b88a2e"/>' +
+ '<rect x="53" y="20" width="10" height="10" rx="2" fill="#b88a2e"/><path d="M55 20v-3M61 20v-3" stroke="#b88a2e" stroke-width="2"/>' +
+ '<g class="lever"><rect x="10" y="22.8" width="50" height="4.4" rx="2.2" fill="#d5dde0" stroke="#7f8f98" stroke-width=".8"/><rect x="46" y="11" width="6" height="14" rx="2.5" fill="#c0392b"/></g>' +
+ '<circle cx="12" cy="25" r="2" fill="#6d5520"/><circle class="led" cx="64" cy="7" r="3.2" fill="#6f7f88"/>');
+const BULB_ART = svg('0 0 44 48',
+ '<circle class="halo" cx="22" cy="16" r="21" fill="#ffd54a" opacity="0"/>' +
+ '<path class="glass" d="M16 30v-4c-6.5-3-8-7-8-10a14 14 0 1 1 28 0c0 3-1.5 7-8 10v4z" fill="#f4f8f8" fill-opacity=".75" stroke="#94a9b3"/>' +
+ '<g class="broken"><ellipse cx="22" cy="9" rx="8" ry="4.5" fill="#5f6468" opacity=".35"/><path d="M17 18l1.7-4 1.7 4 .9-2.2M27 18l-1.6-4-.8 1.9 .4 3.2" stroke="#4a3f2c" stroke-width="1.3" fill="none" stroke-linejoin="round"/></g>' +
+ '<path class="lit" d="M16 30v-4c-6.5-3-8-7-8-10a14 14 0 1 1 28 0c0 3-1.5 7-8 10v4z" fill="#ffe27a" opacity="0"/>' +
+ '<path d="M18 30l-1-12M26 30l1-12" stroke="#8a8f93" stroke-width="1" fill="none"/>' +
+ '<path class="fil" d="M17 18l1.7-4 1.7 4 1.7-4 1.7 4 1.6-4 1.6 4" stroke="#6b5a3a" stroke-width="1.3" fill="none" stroke-linejoin="round"/>' +
+ '<rect x="15.5" y="30" width="13" height="10" rx="1.5" fill="#b8bec3" stroke="#7d868c"/><path d="M15.5 33.5h13M15.5 36.5h13" stroke="#8c959b"/>' +
+ '<path d="M19 40h6l-1.5 4h-3z" fill="#3b444a"/>');
+
+const ports = new Map();
+const els = {};
+const closed = new Set();
+const burnt = new Map(); // bulb id -> voltage that burnt it (null = broken by hand)
+let popNext = null;
+const rows = [
+ ['ถ่าน AA', ['b1','b2','b3','j1']],
+ ['สวิตช์', ['s1','s2','s3','j2']],
+ ['หลอดไฟ', ['l1','l2','l3','j3']],
+ ['มิเตอร์', ['v','a',null,'j4']]
+];
+const positions = new Map();
+rows.forEach(([title,ids],row) => {
+ const heading = document.createElement('h2');
+ heading.className = 'row-label';
+ heading.style.top = 12 + row * 161 + 'px';
+ heading.textContent = title;
+ board.append(heading);
+ ids.forEach((id,column) => id && positions.set(id,[column,row]));
+});
+for (const [id,name,kind,terminals] of parts) {
+ const [column,row] = positions.get(id);
+ const part = document.createElement('div');
+ part.className = 'part';
+ part.style.left = 22 + column * 172 + 'px';
+ part.style.top = 31 + row * 161 + 'px';
+ part.innerHTML = '<div class="name"></div><div class="symbol"></div><div class="ports"></div>';
+ part.firstChild.textContent = name;
+ let art;
+ if (kind === 'switch') {
+  art = document.createElement('button');
+  art.className = 'switch';
+  art.innerHTML = SWITCH_ART;
+  art.setAttribute('aria-pressed','false');
+  art.setAttribute('aria-label',name);
+  art.onclick = () => {
+   closed.has(id) ? closed.delete(id) : closed.add(id);
+   update();
+  };
+ } else {
+  art = document.createElement('span');
+  art.className = kind;
+  if (kind === 'bulb') {
+   art.innerHTML = BULB_ART;
+   const toggleBulb = () => {
+    if (!burnt.delete(id)) { burnt.set(id,null); popNext = id; } // null = broken by hand
+    update();
+   };
+   art.setAttribute('role','button');
+   art.setAttribute('tabindex','0');
+   art.onclick = toggleBulb;
+   art.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBulb(); } };
+  }
+  else if (kind === 'meter') art.textContent = id === 'v' ? '— V' : '— A';
+  else if (kind === 'junction') art.textContent = 'เชื่อมถึงกัน';
+ }
+ const schemKey = kind === 'meter' ? id : kind;
+ const schem = document.createElement('span');
+ schem.className = 'schem';
+ schem.title = 'สัญลักษณ์' + SCHEM_NAME[schemKey];
+ schem.innerHTML = svg('0 0 44 30',SCHEM[schemKey],schemAttrs);
+ part.children[1].append(art,schem);
+ els[id] = {name:part.firstChild,art,schem,label:name};
+ terminals.forEach((terminal,i) => {
+  const port = document.createElement('button');
+  const key = id + i;
+  port.className = 'port' + (['+','A','V'].includes(terminal) ? ' red' : '');
+  port.innerHTML = '<i></i><span></span>';
+  port.lastChild.textContent = terminal;
+  port.setAttribute('aria-label',name + ' ขั้ว ' + terminal);
+  port.setAttribute('aria-pressed','false');
+  port.onclick = () => choose(key);
+  ports.set(key,port);
+  part.lastChild.append(port);
+ });
+ board.append(part);
+}
+
+// ---- circuit model (nodal analysis) ----
+const EMF = 1.5, R_CELL = 0.1, R_SW = 0.01, R_BULB = 5, R_AMM = 0.05, R_VOLT = 1e7;
+const P_RATED = EMF * EMF / R_BULB;
+const V_WARN = 1.95, V_BURN = 2.25; // bulb overbright warning / burnout voltage
+function gauss(A,b) {
+ const n = b.length;
+ for (let c = 0; c < n; c++) {
+  let p = c;
+  for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+  [A[c],A[p]] = [A[p],A[c]]; [b[c],b[p]] = [b[p],b[c]];
+  const d = A[c][c];
+  if (Math.abs(d) < 1e-18) continue;
+  for (let r = c + 1; r < n; r++) {
+   const f = A[r][c] / d;
+   if (!f) continue;
+   for (let k = c; k < n; k++) A[r][k] -= f * A[c][k];
+   b[r] -= f * b[c];
+  }
+ }
+ const x = new Array(n).fill(0);
+ for (let r = n - 1; r >= 0; r--) {
+  let s = b[r];
+  for (let k = r + 1; k < n; k++) s -= A[r][k] * x[k];
+  x[r] = Math.abs(A[r][r]) < 1e-18 ? 0 : s / A[r][r];
+ }
+ return x;
+}
+function simulate() {
+ const keys = [...ports.keys()];
+ const parent = new Map(keys.map(k => [k,k]));
+ const find = k => { while (parent.get(k) !== k) { parent.set(k,parent.get(parent.get(k))); k = parent.get(k); } return k; };
+ const join = (a,b) => parent.set(find(a),find(b));
+ wires.forEach(([a,b]) => join(a,b));
+ ['j1','j2','j3','j4'].forEach(j => { join(j+0,j+1); join(j+0,j+2); });
+ const index = new Map();
+ keys.forEach(k => { const r = find(k); if (!index.has(r)) index.set(r,index.size); });
+ const n = index.size, node = k => index.get(find(k));
+ const G = Array.from({length:n},() => new Array(n).fill(0)), I = new Array(n).fill(0);
+ const link = (a,b,g) => {
+  const i = node(a), j = node(b);
+  if (i === j) return;
+  G[i][i] += g; G[j][j] += g; G[i][j] -= g; G[j][i] -= g;
+ };
+ for (let c = 1; c <= count; c++) {
+  link('b'+c+'0','b'+c+'1',1/R_CELL);
+  I[node('b'+c+'1')] += EMF / R_CELL;
+  I[node('b'+c+'0')] -= EMF / R_CELL;
+ }
+ closed.forEach(s => link(s+0,s+1,1/R_SW));
+ ['l1','l2','l3'].forEach(l => { if (!burnt.has(l)) link(l+0,l+1,1/R_BULB); });
+ link('v0','v1',1/R_VOLT);
+ link('a0','a1',1/R_AMM);
+ for (let i = 0; i < n; i++) G[i][i] += 1e-9;
+ const x = gauss(G,I);
+ return k => x[node(k)];
+}
+const wired = k => wires.some(w => w.includes(k));
+const clean = (v,eps) => Math.abs(v) < eps ? 0 : v;
+
+function renderCircuit() {
+ // burn bulbs one at a time (worst first): a burnt bulb opens the circuit and changes every other voltage
+ let V = simulate();
+ const fresh = [];
+ for (;;) {
+  const drops = ['l1','l2','l3'].filter(l => !burnt.has(l)).map(l => [l,Math.abs(V(l+'0') - V(l+'1'))]);
+  const worst = drops.filter(([,d]) => d > V_BURN).sort((x,y) => y[1] - x[1])[0];
+  if (!worst) break;
+  burnt.set(worst[0],worst[1]);
+  fresh.push(worst[0]);
+  V = simulate();
+ }
+ const alerts = [];
+ // batteries
+ for (let c = 1; c <= 3; c++) {
+  const cell = els['b'+c].art;
+  cell.classList.toggle('on',c <= count);
+  cell.textContent = c <= count ? '1.5 V' : 'ว่าง';
+  if (c <= count) {
+   const current = (EMF - (V('b'+c+'1') - V('b'+c+'0'))) / R_CELL;
+   if (Math.abs(current) > 2) alerts.push(['bad',`ถ่าน ${c} ลัดวงจร กระแส ${Math.abs(current).toFixed(1)} A — ถ่านร้อนและหมดเร็ว`]);
+  }
+ }
+ // switches
+ for (const s of ['s1','s2','s3']) {
+  const on = closed.has(s), e = els[s];
+  e.art.setAttribute('aria-pressed',on);
+  e.art.querySelector('.led').setAttribute('fill',on ? '#2fd28a' : '#6f7f88');
+  e.name.textContent = e.label + ' · ' + (on ? 'เปิด' : 'ปิด');
+  e.schem.querySelector('.blade').setAttribute('d',on ? 'M11 20H33' : 'M11 19L32 7');
+ }
+ // bulbs
+ const lit = [];
+ let bulbWired = false;
+ ['l1','l2','l3'].forEach((l,i) => {
+  const holder = els[l].art, art = holder.firstChild, isBurnt = burnt.has(l);
+  holder.classList.toggle('burnt',isBurnt);
+  els[l].name.classList.toggle('burnt',isBurnt);
+  els[l].name.textContent = isBurnt ? `หลอด ${i+1} · ขาด` : els[l].label;
+  holder.setAttribute('aria-label',isBurnt ? `หลอด ${i+1} ขาด — กดเพื่อเปลี่ยนหลอดใหม่` : `หลอด ${i+1} — กดเพื่อทำให้หลอดขาด`);
+  holder.title = isBurnt ? 'คลิกเพื่อเปลี่ยนหลอดใหม่' : 'คลิกเพื่อทำให้หลอดขาด';
+  if (fresh.includes(l) || popNext === l) { holder.classList.remove('pop'); void holder.offsetWidth; holder.classList.add('pop'); }
+  if (wired(l+'0') || wired(l+'1')) bulbWired = true;
+  if (isBurnt) {
+   art.querySelector('.halo').setAttribute('opacity',0);
+   art.querySelector('.lit').setAttribute('opacity',0);
+   art.style.filter = 'none';
+   const cause = burnt.get(l);
+   alerts.push(['bad',cause === null
+    ? `หลอด ${i+1} ขาด (ทำให้ขาดเอง) — คลิกที่หลอดเพื่อเปลี่ยนใหม่`
+    : `หลอด ${i+1} ขาด เพราะได้แรงดัน ${cause.toFixed(2)} V (พิกัด 1.5 V) — คลิกที่หลอดเพื่อเปลี่ยนใหม่`]);
+   return;
+  }
+  const drop = V(l+'0') - V(l+'1');
+  const ratio = drop * drop / R_BULB / P_RATED;
+  const glow = Math.min(1,Math.sqrt(ratio));
+  const over = Math.abs(drop) > V_WARN;
+  art.querySelector('.halo').setAttribute('opacity',(glow * .45).toFixed(3));
+  art.querySelector('.halo').setAttribute('fill',over ? '#ff9a5a' : '#ffd54a');
+  art.querySelector('.lit').setAttribute('opacity',(glow * .85).toFixed(3));
+  art.querySelector('.lit').setAttribute('fill',over ? '#fff6e0' : '#ffe27a');
+  art.querySelector('.fil').setAttribute('stroke',glow > .08 ? '#fff4c2' : '#6b5a3a');
+  art.style.filter = glow > .05 ? `drop-shadow(0 0 ${4 + glow * 10}px rgba(255,${over ? 140 : 205},70,${glow * .9}))` : 'none';
+  if (wired(l+'0') || wired(l+'1')) bulbWired = true;
+  if (glow > .05) lit.push(`หลอด ${i+1} (${Math.abs(drop).toFixed(2)} V)`);
+  if (over) alerts.push(['bad',`หลอด ${i+1} ได้แรงดัน ${Math.abs(drop).toFixed(2)} V เกินพิกัด 1.5 V — สว่างจ้า เสี่ยงขาด`]);
+ });
+ popNext = null;
+ document.querySelector('#replace').hidden = !burnt.size;
+ // voltmeter
+ const vMeter = els.v.art, aMeter = els.a.art;
+ if (wired('v0') && wired('v1')) {
+  const reading = clean(V('v1') - V('v0'),.005);
+  vMeter.textContent = reading.toFixed(2) + ' V';
+  document.querySelector('#vRead').textContent = reading.toFixed(2) + ' V';
+  if (reading < 0) alerts.push(['bad','โวลต์มิเตอร์อ่านค่าติดลบ — สลับสาย V กับ COM']);
+ } else {
+  vMeter.textContent = '— V';
+  document.querySelector('#vRead').textContent = 'ยังไม่ต่อ';
+ }
+ // ammeter
+ aMeter.classList.remove('warn');
+ if (wired('a0') && wired('a1')) {
+  const current = clean((V('a1') - V('a0')) / R_AMM,.0005);
+  const text = Math.abs(current) > 5 ? 'OL' : current.toFixed(3) + ' A';
+  aMeter.textContent = text;
+  document.querySelector('#aRead').textContent = text;
+  if (Math.abs(current) > 5) {
+   aMeter.classList.add('warn');
+   alerts.push(['bad','แอมมิเตอร์เกินพิกัด — ห้ามต่อแอมมิเตอร์คร่อมแหล่งจ่าย ต้องต่ออนุกรมกับหลอด']);
+  } else if (current < 0) alerts.push(['bad','แอมมิเตอร์อ่านค่าติดลบ — กระแสต้องเข้าขั้ว A ออกขั้ว COM']);
+ } else {
+  aMeter.textContent = '— A';
+  document.querySelector('#aRead').textContent = 'ยังไม่ต่อ';
+ }
+ if (lit.length) alerts.push(['ok','หลอดที่ติด: ' + lit.join(', ')]);
+ else if (bulbWired && !alerts.length) alerts.push(['','หลอดยังไม่ติด — เปิดสวิตช์และตรวจว่าวงจรครบรอบ']);
+ const box = document.querySelector('#alerts');
+ box.replaceChildren(...alerts.map(([cls,text]) => {
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = (cls === 'bad' ? '⚠ ' : '') + text;
+  return line;
+ }));
+}
+
+const examples = {
+ series: ['b1 b2 s1 a l1 l2','v1/l10 v0/l21 l21/b10'],
+ parallel: ['b1 s1 a j1','j10/l10 j11/s20 s21/l20 l11/j20 l21/j21 j22/b10 v1/l10 v0/l11'],
+ mixed: ['b1 s1 a j1','j10/l10 j11/s20 s21/l20 l21/l30 l11/j20 l31/j21 j22/b10 v1/l10 v0/l11'],
+ battery: ['','b11/b20 b21/b30 v0/b10 v1/b31'],
+ free: ['','']
+};
+let wires = [], selected = null, mode = 'free', count = 1;
+const colors = ['#bc483c','#2368a1','#167d6a','#7852a2','#aa621d'];
+function center(key) {
+ let element = ports.get(key).firstChild;
+ let x = element.offsetWidth / 2 + 2, y = element.offsetHeight / 2 + 2;
+ while (element && element !== board) {
+  x += element.offsetLeft;
+  y += element.offsetTop;
+  element = element.offsetParent;
+ }
+ return [x,y];
+}
+let notice = '';
+const cubic = (P,t) => [0,1].map(k => (1-t)**3*P[0][k] + 3*(1-t)**2*t*P[1][k] + 3*(1-t)*t*t*P[2][k] + t**3*P[3][k]);
+const dist = (p,q) => Math.hypot(p[0]-q[0],p[1]-q[1]);
+const portName = key => ports.get(key).getAttribute('aria-label');
+function removeWire(wire) {
+ const i = wires.indexOf(wire);
+ if (i < 0) return;
+ wires.splice(i,1);
+ mode = '';
+ selected = null;
+ notice = 'ลบสายแล้ว · ';
+ update();
+}
+function draw() {
+ wireLayer.replaceChildren();
+ const portCenters = [...ports.keys()].map(center);
+ wires.forEach((wire,i) => {
+  const [a,b] = wire;
+  const [x1,y1] = center(a), [x2,y2] = center(b);
+  const bend = 29 + i % 4 * 7;
+  const P = [[x1,y1],[x1,y1+bend],[x2,y2+bend],[x2,y2]];
+  const d = `M${x1} ${y1}C${x1} ${y1+bend} ${x2} ${y2+bend} ${x2} ${y2}`;
+  const g = document.createElementNS(SVG_NS,'g');
+  g.setAttribute('class','wire');
+  const path = (cls,attrs) => {
+   const p = document.createElementNS(SVG_NS,'path');
+   p.setAttribute('class',cls);
+   for (const k in attrs) p.setAttribute(k,attrs[k]);
+   g.append(p);
+   return p;
+  };
+  path('casing',{d});
+  path('line',{d,stroke:colors[i % colors.length]});
+  // clickable part of the wire leaves a gap around every port so ports stay clickable
+  let hitD = '', pen = false;
+  for (let s = 0; s <= 80; s++) {
+   const pt = cubic(P,s/80);
+   if (portCenters.some(c => dist(pt,c) < 18)) { pen = false; continue; }
+   hitD += (pen ? 'L' : 'M') + pt[0].toFixed(1) + ' ' + pt[1].toFixed(1);
+   pen = true;
+  }
+  const hit = path('hit',{d:hitD || 'M0 0'});
+  hit.setAttribute('tabindex','0');
+  hit.setAttribute('role','button');
+  hit.setAttribute('aria-label',`ลบสาย ${portName(a)} ถึง ${portName(b)}`);
+  hit.appendChild(document.createElementNS(SVG_NS,'title')).textContent = 'คลิกเพื่อลบสายนี้';
+  hit.onclick = () => removeWire(wire);
+  hit.onkeydown = e => {
+   if (['Enter',' ','Delete','Backspace'].includes(e.key)) { e.preventDefault(); removeWire(wire); }
+  };
+  hit.onpointerenter = () => g.classList.add('hover');
+  hit.onpointerleave = () => g.classList.remove('hover');
+  wireLayer.append(g);
+ });
+}
+function update() {
+ for (const [key,port] of ports) {
+  port.classList.toggle('selected',selected === key);
+  port.setAttribute('aria-pressed',selected === key);
+ }
+ document.querySelector('#status').textContent = selected
+  ? 'เลือกแล้ว · ' + ports.get(selected).getAttribute('aria-label')
+  : notice + wires.length + ' เส้น';
+ notice = '';
+ document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed',b.dataset.mode === mode));
+ document.querySelectorAll('[data-count]').forEach(b => b.setAttribute('aria-pressed',Number(b.dataset.count) === count));
+ document.querySelector('#voltage').textContent = (1.5 * count).toFixed(1) + ' V เมื่อต่ออนุกรม';
+ renderCircuit();
+ draw();
+}
+function choose(key) {
+ if (!selected) selected = key;
+ else {
+  if (selected !== key) {
+   const i = wires.findIndex(([a,b]) => (a === selected && b === key) || (b === selected && a === key));
+   if (i < 0) wires.push([selected,key]);
+   else wires.splice(i,1);
+   mode = '';
+  }
+  selected = null;
+ }
+ update();
+}
+function preset(next) {
+ mode = next;
+ selected = null;
+ closed.clear();
+ burnt.clear();
+ count = {series:2,parallel:1,mixed:1,battery:3,free:1}[mode];
+ const [loop,extra] = examples[mode];
+ wires = extra ? extra.split(' ').map(pair => pair.split('/')) : [];
+ if (loop) {
+  const path = loop.split(' ');
+  path.slice(0,-1).forEach((id,i) => {
+   const successor = path[i+1];
+   wires.push([id + (id === 'a' ? 0 : 1), successor + (successor === 'a' ? 1 : 0)]);
+  });
+ }
+ update();
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => preset(b.dataset.mode));
+document.querySelectorAll('[data-count]').forEach(b => b.onclick = () => {
+ count = Number(b.dataset.count);
+ if (mode === 'battery') {
+  wires = Array.from({length:count-1},(_,i) => ['b'+(i+1)+'1','b'+(i+2)+'0']);
+  wires.push(['v0','b10'],['v1','b'+count+'1']);
+ } else if (mode !== 'free') mode = '';
+ selected = null;
+ update();
+});
+document.querySelector('#replace').onclick = () => { burnt.clear(); update(); };
+document.querySelector('#undo').onclick = () => {
+ if (wires.pop()) mode = '';
+ selected = null;
+ update();
+};
+let tilt = 24, turn = -8, drag = null;
+function angle() {
+ board.style.setProperty('--tilt',tilt+'deg');
+ board.style.setProperty('--turn',turn+'deg');
+}
+document.querySelector('#top').onclick = () => { tilt = 0; turn = 0; angle(); };
+document.querySelector('#reset').onclick = () => { tilt = 24; turn = -8; angle(); };
+stage.onpointerdown = e => {
+ if (e.button !== 0 || e.target.closest('button, .hit, .bulb')) return;
+ drag = {x:e.clientX,y:e.clientY,tilt,turn};
+ stage.setPointerCapture(e.pointerId);
+};
+stage.onpointermove = e => {
+ if (!drag) return;
+ tilt = Math.min(58,Math.max(-35,drag.tilt-(e.clientY-drag.y)*.23));
+ turn = Math.min(27,Math.max(-27,drag.turn+(e.clientX-drag.x)*.22));
+ angle();
+};
+stage.onpointerup = stage.onpointercancel = stage.onlostpointercapture = () => { drag = null; };
+new ResizeObserver(([entry]) => {
+ const {width,height} = entry.contentRect;
+ scene.style.setProperty('--scale',Math.min((width-24)/840,(height-54)/735,1.12));
+}).observe(stage);
+preset('series');
+</script>
+</html>
